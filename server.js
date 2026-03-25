@@ -399,8 +399,26 @@ app.get('/celular', (req, res) => {
 <audio id="somErro">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
 </audio>
+
     <script>
       let idProduto = null;
+      function tocarSom(tipo) {
+  if (tipo === 'ok') {
+    const som = document.getElementById('somOk');
+    som.currentTime = 0;
+    som.play();
+  }
+
+  if (tipo === 'erro') {
+    const som = document.getElementById('somErro');
+    som.currentTime = 0;
+    som.play();
+    setTimeout(() => {
+      som.currentTime = 0;
+      som.play();
+    }, 200);
+  }
+}
 function toggleSenha() {
   const campo = document.getElementById('senha');
   campo.type = campo.type === 'password' ? 'text' : 'password';
@@ -433,6 +451,12 @@ function toggleSenha() {
   const d = await r.json();
 
   if (!d.ok || !d.produto) {
+  tocarSom('erro');
+  alert(d.erro || 'Produto não encontrado');
+  return;
+}
+
+tocarSom('ok');
     alert(d.erro || 'Produto não encontrado');
     return;
   }
@@ -461,9 +485,11 @@ function toggleSenha() {
   const d = await r.json();
 
   if (!d.ok) {
-    alert(d.erro || 'Erro ao salvar');
-    return;
-  }
+    if (!d.ok) {
+  tocarSom('erro');
+  alert(d.erro || 'Erro ao salvar');
+  return;
+}
 
   alert('Salvo com sucesso');
 
