@@ -352,7 +352,93 @@ app.post("/salvar", async (req, res) => {
     });
   }
 });
+// ================= TELA CELULAR COM LOGIN =================
+app.get('/celular', (req, res) => {
+  res.send(`
+  <html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+      input, button { width: 100%; padding: 15px; margin-top: 10px; font-size: 18px; }
+      .box { background: white; padding: 15px; border-radius: 10px; margin-top: 15px; }
+      img { width: 100%; margin-top: 10px; }
+      #sistema { display: none; }
+    </style>
+  </head>
+  <body>
+    <h2>Login</h2>
+    <input type="text" id="usuario" placeholder="Usuário" />
+    <input type="password" id="senha" placeholder="Senha" />
+    <button onclick="login()">Entrar</button>
 
+    <div id="sistema">
+      <h2>Localização de Produtos</h2>
+      <input type="text" id="sku" placeholder="Bipar ou digitar SKU" />
+      <button onclick="buscar()">Buscar</button>
+
+      <div class="box">
+        <div><b>Produto:</b> <span id="nome"></span></div>
+        <div><b>Estoque:</b> <span id="estoque"></span></div>
+        <div><b>Local atual:</b> <span id="local"></span></div>
+      </div>
+
+      <input type="text" id="novoLocal" placeholder="Nova localização" />
+      <button onclick="salvar()">Salvar</button>
+
+      <img id="imagem" />
+    </div>
+
+    <script>
+      let idProduto = null;
+
+      async function login() {
+        const usuario = document.getElementById('usuario').value;
+        const senha = document.getElementById('senha').value;
+
+        const r = await fetch('/login', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ usuario, senha })
+        });
+
+        if (r.status === 200) {
+          document.getElementById('sistema').style.display = 'block';
+          document.querySelector('h2').innerText = 'Sistema';
+          document.getElementById('usuario').style.display = 'none';
+          document.getElementById('senha').style.display = 'none';
+          document.querySelector('button').style.display = 'none';
+        } else {
+          alert('Login inválido');
+        }
+      }
+
+      async function buscar() {
+        const sku = document.getElementById('sku').value;
+        const r = await fetch('/buscar?sku=' + sku);
+        const d = await r.json();
+
+        document.getElementById('nome').innerText = d.nome;
+        document.getElementById('estoque').innerText = d.estoque;
+        document.getElementById('local').innerText = d.localizacao;
+        document.getElementById('imagem').src = d.imagem;
+        idProduto = d.idProduto;
+      }
+
+      async function salvar() {
+        const novoLocal = document.getElementById('novoLocal').value;
+        await fetch('/salvar', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ idProduto, localizacao: novoLocal })
+        });
+        alert('Salvo com sucesso');
+      }
+    </script>
+  </body>
+  </html>
+  `);
+});
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
