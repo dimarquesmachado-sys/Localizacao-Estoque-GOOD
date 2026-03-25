@@ -195,63 +195,40 @@ app.post("/salvar", async (req, res) => {
 
     let accessToken = BLING_ACCESS_TOKEN;
 
-    // 1. Busca o produto pelo código
-    let buscaResp = await fetch(
+    // 1. Buscar produto pelo código
+    let busca = await consultarBling(
       `https://api.bling.com.br/Api/v3/produtos?codigo=${encodeURIComponent(codigo)}`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json"
-        }
-      }
+      accessToken
     );
 
-    let buscaData = await buscaResp.json();
-
-    if (!buscaResp.ok && buscaData?.error?.type === "invalid_token") {
-      const novosTokens = await renovarAccessToken();
-      accessToken = novosTokens.access_token;
-
-      buscaResp = await fetch(
-        `https://api.bling.com.br/Api/v3/produtos?codigo=${encodeURIComponent(codigo)}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            Accept: "application/json"
-          }
-        }
-      );
-
-      buscaData = await buscaResp.json();
-    }
-
-    if (!buscaResp.ok || !buscaData?.data?.length) {
+    if (!busca.data?.data?.length) {
       return res.status(404).json({
         ok: false,
-        erro: "Produto não encontrado para salvar localização.",
-        retornoBling: buscaData
+        erro: "Produto não encontrado."
       });
     }
 
-    const produto = buscaData.data[0];
-    const id = produto.id;
+    const id = busca.data.data[0].id;
 
-    // 2. Atualiza localização
-    // Observação:
-    // alguns campos são mantidos para evitar rejeição do PUT
-    const body = {
-      nome: produto.nome || produto.descricao || "",
-      codigo: produto.codigo || codigo,
-      tipo: produto.tipo || "P",
-      situacao: produto.situacao || "A",
-      formato: produto.formato || "S",
-      descricaoCurta: produto.descricaoCurta || "",
-      preco: produto.preco || 0,
-      localizacao: novaLocalizacao
-    };
+    // 2. Buscar detalhe completo do produto
+    let detalhe = await consultarBling(
+      `https://api.bling.com.br/Api/v3/produtos/${id}`,
+      accessToken
+    );
 
+    if (!detalhe.data?.data) {
+      return res.status(404).json({
+        ok: false,
+        erro: "Erro ao buscar detalhe do produto."
+      });
+    }
+
+    let produtoCompleto = detalhe.data.data;
+
+    // 3. Alterar apenas a localização
+    produtoCompleto.localizacao = novaLocalizacao;
+
+    // 4. Enviar PUT com o objeto completo
     let putResp = await fetch(`https://api.bling.com.br/Api/v3/produtos/${id}`, {
       method: "PUT",
       headers: {
@@ -259,40 +236,22 @@ app.post("/salvar", async (req, res) => {
         Accept: "application/json",
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(produtoCompleto)
     });
 
     let putData = await putResp.json();
 
-    if (!putResp.ok && putData?.error?.type === "invalid_token") {
-      const novosTokens = await renovarAccessToken();
-      accessToken = novosTokens.access_token;
-
-      putResp = await fetch(`https://api.bling.com.br/Api/v3/produtos/${id}`, {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          Accept: "application/json",
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      });
-
-      putData = await putResp.json();
-    }
-
     if (!putResp.ok) {
       return res.status(putResp.status).json({
         ok: false,
-        erro: "Erro ao salvar localização no Bling.",
+        erro: "Erro ao salvar localização",
         retornoBling: putData
       });
     }
 
     return res.json({
       ok: true,
-      mensagem: "Localização atualizada com sucesso.",
-      retornoBling: putData
+      mensagem: "Localização salva com sucesso."
     });
 
   } catch (error) {
@@ -301,8 +260,4 @@ app.post("/salvar", async (req, res) => {
       erro: error.message
     });
   }
-});
-
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
 });
