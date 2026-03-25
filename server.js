@@ -378,7 +378,7 @@ app.get('/celular', (req, res) => {
 
     <div id="sistema">
       <h2>Localização de Produtos</h2>
-      <input type="text" id="sku" placeholder="Bipar ou digitar SKU" />
+     <input type="text" id="sku" placeholder="Bipar ou digitar SKU" onkeypress="if(event.key==='Enter'){buscar();}" autofocus />
       <button onclick="buscar()">Buscar</button>
 
       <div class="box">
@@ -387,7 +387,7 @@ app.get('/celular', (req, res) => {
         <div><b>Local atual:</b> <span id="local"></span></div>
       </div>
 
-      <input type="text" id="novoLocal" placeholder="Nova localização" />
+      <input type="text" id="novoLocal" placeholder="Nova localização" onkeypress="if(event.key==='Enter'){salvar();}" />
       <button onclick="salvar()">Salvar</button>
 
       <img id="imagem" />
@@ -460,6 +460,10 @@ function toggleSenha() {
   }
 
   alert('Salvo com sucesso');
+
+if (navigator.vibrate) {
+  navigator.vibrate(200);
+}
 
   // LIMPAR TELA
   document.getElementById('sku').value = '';
