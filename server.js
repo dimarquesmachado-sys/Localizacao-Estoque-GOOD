@@ -379,7 +379,6 @@ app.get('/celular', (req, res) => {
 <button id="btnEntrar" onclick="login()">Entrar</button>
 
     <div id="sistema">
-      <h2>Localização de Produtos</h2>
      <input type="text" id="sku" placeholder="Bipar ou digitar SKU" onkeypress="if(event.key==='Enter'){buscar();}" autofocus />
       <button onclick="buscar()">Buscar</button>
 
@@ -463,7 +462,7 @@ app.get('/celular', (req, res) => {
 
       if (r.status === 200) {
         document.getElementById('sistema').style.display = 'block';
-        document.getElementById('tituloPagina').innerText = 'GOOD';
+        document.getElementById('tituloPagina').innerText = 'GOOD x Localização Estoque';
         document.getElementById('usuario').style.display = 'none';
         document.getElementById('senha').style.display = 'none';
         document.getElementById('chkMostrarSenha').parentElement.style.display = 'none';
