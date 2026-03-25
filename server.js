@@ -60,18 +60,23 @@ function isExactDigits(a, b) {
 }
 
 function extractImage(produto) {
-  return (
-    produto?.imagemURL ||
-    produto?.imagemUrl ||
-    produto?.imagem ||
-    produto?.imagensExternas?.[0]?.link ||
-    produto?.imagensExternas?.[0]?.url ||
-    produto?.imagens?.[0]?.link ||
-    produto?.imagens?.[0]?.url ||
-    produto?.midia?.[0]?.link ||
-    produto?.midia?.[0]?.url ||
-    ""
-  );
+  const candidatos = [
+    produto?.imagemURL,
+    produto?.imagemUrl,
+    produto?.imagem,
+    produto?.linkImagem,
+    produto?.urlImagem,
+    produto?.imagensExternas?.[0]?.link,
+    produto?.imagensExternas?.[0]?.url,
+    produto?.imagens?.[0]?.link,
+    produto?.imagens?.[0]?.url,
+    produto?.midia?.[0]?.link,
+    produto?.midia?.[0]?.url,
+    produto?.anexos?.[0]?.link,
+    produto?.anexos?.[0]?.url
+  ].filter(Boolean);
+
+  return candidatos[0] || "";
 }
 
 function extractLocalizacao(produto) {
@@ -141,7 +146,6 @@ app.post("/login", (req, res) => {
   }
 });
 
-// ================= TOKEN BLING =================
 // ================= TOKEN BLING =================
 async function renovarAccessToken() {
   const clientId = process.env.BLING_CLIENT_ID;
@@ -294,36 +298,50 @@ async function resolverProduto(tipo, valor) {
     const lista = tentativa.data?.data || [];
     if (!lista.length) continue;
 
-    const candidatosExatos = lista.filter((item) => {
-      if (!item?.id || idsJaTentados.has(item.id)) return false;
-
-      if (tipoBusca === "SKU") {
+    if (tipoBusca === "SKU") {
+      const candidatosExatos = lista.filter((item) => {
+        if (!item?.id || idsJaTentados.has(item.id)) return false;
         return matchSkuExato(item, valorOriginal);
+      });
+
+      for (const item of candidatosExatos) {
+        idsJaTentados.add(item.id);
+
+        const detalhe = await buscarDetalheProduto(item.id, accessTokenAtual);
+        if (!detalhe?.produto) continue;
+
+        accessTokenAtual = detalhe.accessToken;
+        const p = detalhe.produto;
+
+        if (matchSkuExato(p, valorOriginal)) {
+          return {
+            ok: true,
+            produto: p,
+            accessToken: accessTokenAtual
+          };
+        }
       }
+    } else {
+      const candidatos = lista
+        .filter((item) => item?.id && !idsJaTentados.has(item.id))
+        .slice(0, 5);
 
-      return matchEanExato(item, valorOriginal);
-    });
+      for (const item of candidatos) {
+        idsJaTentados.add(item.id);
 
-    for (const item of candidatosExatos) {
-      idsJaTentados.add(item.id);
+        const detalhe = await buscarDetalheProduto(item.id, accessTokenAtual);
+        if (!detalhe?.produto) continue;
 
-      const detalhe = await buscarDetalheProduto(item.id, accessTokenAtual);
-      if (!detalhe?.produto) continue;
+        accessTokenAtual = detalhe.accessToken;
+        const p = detalhe.produto;
 
-      accessTokenAtual = detalhe.accessToken;
-      const p = detalhe.produto;
-
-      const confirma =
-        tipoBusca === "SKU"
-          ? matchSkuExato(p, valorOriginal)
-          : matchEanExato(p, valorOriginal);
-
-      if (confirma) {
-        return {
-          ok: true,
-          produto: p,
-          accessToken: accessTokenAtual
-        };
+        if (matchEanExato(p, valorOriginal)) {
+          return {
+            ok: true,
+            produto: p,
+            accessToken: accessTokenAtual
+          };
+        }
       }
     }
   }
