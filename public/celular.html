@@ -102,7 +102,20 @@
     <div id="telaLogin" class="login-box">
       <h1 style="font-size: 26px; margin-bottom: 18px;">Entrar</h1>
       <input id="usuario" class="campo" type="text" placeholder="Usuário" />
-      <input id="senha" class="campo" type="password" placeholder="Senha" />
+      <div style="position: relative;">
+  <input id="senha" class="campo" type="password" placeholder="Senha" style="padding-right: 60px;" />
+  <button type="button" id="toggleSenha" style="
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    bottom: 8px;
+    width: 44px;
+    border: 1px solid #bdbdbd;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 16px;
+  ">👁</button>
+</div>
       <button id="btnLogin" class="btn">Entrar</button>
       <div id="statusLogin" class="status"></div>
     </div>
@@ -113,12 +126,9 @@
         <button id="btnSair" class="btn-sair">Sair</button>
       </div>
 
-      <select id="tipoBusca" class="campo">
-        <option value="SKU">Buscar por SKU</option>
-        <option value="EAN">Buscar por EAN</option>
-      </select>
+   
 
-      <input id="codigoBusca" class="campo" type="text" placeholder="Digite SKU ou EAN" />
+      <input id="codigoBusca" class="campo" type="text" placeholder="Digitar SKU ou Bipar EAN" />
       <button id="btnBuscar" class="btn">Buscar</button>
 
       <div id="cardProduto" class="card hidden">
@@ -154,7 +164,7 @@
     const btnLogin = document.getElementById("btnLogin");
     const statusLogin = document.getElementById("statusLogin");
 
-    const tipoBusca = document.getElementById("tipoBusca");
+    
     const codigoBusca = document.getElementById("codigoBusca");
     const btnBuscar = document.getElementById("btnBuscar");
     const btnSalvar = document.getElementById("btnSalvar");
@@ -171,6 +181,53 @@
     const imagemProduto = document.getElementById("imagemProduto");
 
     function setStatus(el, msg, tipo = "") {
+      function tocarBeep(tipo = "ok") {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.type = "sine";
+    osc.frequency.value = tipo === "ok" ? 880 : 220;
+    gain.gain.value = 0.08;
+
+    osc.start();
+
+    setTimeout(() => {
+      osc.stop();
+      ctx.close();
+    }, tipo === "ok" ? 120 : 220);
+  } catch (e) {}
+}
+
+function vibrar(tipo = "ok") {
+  if (!navigator.vibrate) return;
+  if (tipo === "ok") {
+    navigator.vibrate(120);
+  } else {
+    navigator.vibrate([120, 80, 120]);
+  }
+}
+
+function feedbackBusca(tipo) {
+  if (tipo === "ok") {
+    codigoBusca.style.border = "2px solid #118a39";
+    codigoBusca.style.background = "#eefbf1";
+    tocarBeep("ok");
+    vibrar("ok");
+  } else if (tipo === "erro") {
+    codigoBusca.style.border = "2px solid #c62828";
+    codigoBusca.style.background = "#fff1f1";
+    tocarBeep("erro");
+    vibrar("erro");
+  } else {
+    codigoBusca.style.border = "1px solid #bdbdbd";
+    codigoBusca.style.background = "#fff";
+  }
+}
       el.textContent = msg || "";
       el.className = "status" + (tipo ? " " + tipo : "");
     }
@@ -197,7 +254,7 @@
       eanProduto.textContent = "";
       estoqueProduto.textContent = "";
       localProduto.textContent = "";
-    }
+      feedbackBusca("");}
 
     function preencherProduto(p) {
       produtoAtual = p;
@@ -248,37 +305,50 @@
     });
 
     btnBuscar.addEventListener("click", async () => {
-      const codigo = codigoBusca.value.trim();
-      const tipo = tipoBusca.value;
+  const codigo = codigoBusca.value.trim();
 
-      limparProduto();
+  limparProduto();
 
-      if (!codigo) {
-        setStatus(statusApp, "Digite um código para buscar.", "erro");
-        return;
-      }
+  if (codigo.length < 2) {
+    setStatus(statusApp, "Digite pelo menos 2 caracteres.", "erro");
+    feedbackBusca("erro");
+    return;
+  }
 
-      setStatus(statusApp, "Buscando...");
+  setStatus(statusApp, "Buscando...");
+  feedbackBusca("");
 
-      try {
-        const url = API_BASE + "/buscar?key=" + encodeURIComponent(API_KEY)
-          + "&tipo=" + encodeURIComponent(tipo)
-          + "&codigo=" + encodeURIComponent(codigo);
+  async function tentarBuscar(tipo) {
+    const url = API_BASE + "/buscar?key=" + encodeURIComponent(API_KEY)
+      + "&tipo=" + encodeURIComponent(tipo)
+      + "&codigo=" + encodeURIComponent(codigo);
 
-        const resp = await fetch(url);
-        const data = await resp.json();
+    const resp = await fetch(url);
+    const data = await resp.json();
+    return data;
+  }
 
-        if (!data.ok || !data.produto) {
-          setStatus(statusApp, data.erro || "Produto não encontrado.", "erro");
-          return;
-        }
+  try {
+    let data = await tentarBuscar("SKU");
 
-        preencherProduto(data.produto);
-        setStatus(statusApp, "Produto encontrado.", "ok");
-      } catch (e) {
-        setStatus(statusApp, "Erro ao buscar: " + e.message, "erro");
-      }
-    });
+    if (!data.ok || !data.produto) {
+      data = await tentarBuscar("EAN");
+    }
+
+    if (!data.ok || !data.produto) {
+      setStatus(statusApp, data.erro || "Produto não encontrado.", "erro");
+      feedbackBusca("erro");
+      return;
+    }
+
+    preencherProduto(data.produto);
+    setStatus(statusApp, "Produto encontrado.", "ok");
+    feedbackBusca("ok");
+  } catch (e) {
+    setStatus(statusApp, "Erro ao buscar: " + e.message, "erro");
+    feedbackBusca("erro");
+  }
+});
 
     btnSalvar.addEventListener("click", async () => {
       if (!produtoAtual) {
@@ -300,7 +370,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             key: API_KEY,
-            tipo: tipoBusca.value,
+            tipo: "",
             codigo: codigoBusca.value.trim(),
             novaLocalizacao: nova
           })
@@ -339,6 +409,16 @@
     } else {
       mostrarLogin();
     }
+
+    const toggleSenha = document.getElementById("toggleSenha");
+
+toggleSenha.addEventListener("click", () => {
+  if (senha.type === "password") {
+    senha.type = "text";
+  } else {
+    senha.type = "password";
+  }
+});
   </script>
 </body>
 </html>
