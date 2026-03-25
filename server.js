@@ -72,13 +72,15 @@ app.get("/buscar", async (req, res) => {
     const produto = data.data[0];
 
     res.json({
-      ok: true,
-      descricao: produto.descricao || "",
-      codigo: produto.codigo || "",
-      localizacao: produto.localizacao || "",
-      saldo: produto.estoque?.saldoVirtualTotal || 0,
-      raw: produto
-    });
+  ok: true,
+  produto: {
+    nome: produto.nome || produto.descricao || "",
+    codigo: produto.codigo || "",
+    localizacao: produto.localizacao || "",
+    estoque: produto.estoque?.saldoVirtualTotal || 0,
+    imagem: produto.imagemURL || ""
+  }
+});
 
   } catch (error) {
     res.status(500).json({
