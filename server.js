@@ -367,7 +367,10 @@ app.get('/celular', (req, res) => {
     </style>
   </head>
   <body>
-    <h2 id="tituloPagina">Login</h2>
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+  <h2 id="tituloPagina" style="margin:0;">Login</h2>
+  <button id="btnSairTopo" onclick="sair()" style="display:none; width:auto; padding:8px 14px; margin-top:0; font-size:14px; background:#eee; color:#000; border:1px solid #ccc; border-radius:8px;">Sair</button>
+</div>
 <input type="text" id="usuario" placeholder="Usuário" />
 <input type="password" id="senha" placeholder="Senha" />
 
@@ -379,7 +382,7 @@ app.get('/celular', (req, res) => {
 <button id="btnEntrar" onclick="login()">Entrar</button>
 
     <div id="sistema">
-    <button onclick="sair()" style="background:#eee; color:#000;">Sair</button>
+    
      <input type="text" id="sku" placeholder="Bipar ou digitar SKU" onkeypress="if(event.key==='Enter'){buscar();}" autofocus />
       <button onclick="buscar()">Buscar</button>
 
@@ -437,11 +440,13 @@ function aplicarLoginNaTela(usuario) {
   document.getElementById('senha').style.display = 'none';
   document.getElementById('chkMostrarSenha').parentElement.style.display = 'none';
   document.getElementById('btnEntrar').style.display = 'none';
+  document.getElementById('btnSairTopo').style.display = 'inline-block';
   document.getElementById('sku').focus();
 }
 
 function sair() {
   localStorage.removeItem('bling_login');
+  document.getElementById('btnSairTopo').style.display = 'none';
   location.reload();
 }
   function toggleSenha() {
@@ -513,34 +518,40 @@ function sair() {
   }
 
   async function buscar() {
-    const sku = document.getElementById('sku').value.trim();
+  const codigoDigitado = document.getElementById('sku').value.trim();
 
-    const r = await fetch('/buscar?key=GIRASSOL_ESTOQUE_2026&tipo=SKU&codigo=' + encodeURIComponent(sku));
-    const d = await r.json();
+  let r = await fetch('/buscar?key=GIRASSOL_ESTOQUE_2026&tipo=SKU&codigo=' + encodeURIComponent(codigoDigitado));
+  let d = await r.json();
 
-    if (!d.ok || !d.produto) {
-      tocarSom('erro');
-      alert(d.erro || 'Produto não encontrado');
-      return;
-    }
-
-    tocarSom('ok');
-
-    document.getElementById('nome').innerText = d.produto.nome || '';
-    document.getElementById('estoque').innerText = d.produto.estoque ?? '';
-    document.getElementById('local').innerText = d.produto.localizacao || '';
-    const img = document.getElementById('imagem');
-if (d.produto.imagem) {
-  img.src = d.produto.imagem;
-  img.style.display = 'block';
-} else {
-  img.src = '';
-  img.style.display = 'none';
-}
-    idProduto = d.produto.id || null;
-
-    document.getElementById('novoLocal').focus();
+  if (!d.ok || !d.produto) {
+    r = await fetch('/buscar?key=GIRASSOL_ESTOQUE_2026&tipo=EAN&codigo=' + encodeURIComponent(codigoDigitado));
+    d = await r.json();
   }
+
+  if (!d.ok || !d.produto) {
+    tocarSom('erro');
+    alert(d.erro || 'Produto não encontrado');
+    return;
+  }
+
+  tocarSom('ok');
+
+  document.getElementById('nome').innerText = d.produto.nome || '';
+  document.getElementById('estoque').innerText = d.produto.estoque ?? '';
+  document.getElementById('local').innerText = d.produto.localizacao || '';
+
+  const img = document.getElementById('imagem');
+  if (d.produto.imagem) {
+    img.src = d.produto.imagem;
+    img.style.display = 'block';
+  } else {
+    img.src = '';
+    img.style.display = 'none';
+  }
+
+  idProduto = d.produto.id || null;
+  document.getElementById('novoLocal').focus();
+}
 
   async function salvar() {
     const sku = document.getElementById('sku').value.trim();
