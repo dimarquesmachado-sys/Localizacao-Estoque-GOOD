@@ -430,6 +430,10 @@ app.get("/", (req, res) => {
 app.get("/celular", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "celular.html"));
 });
+
+app.get("/celular", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "celular.html"));
+});
 // ================= START =================
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
