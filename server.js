@@ -455,3 +455,12 @@ app.get('/celular', (req, res) => {
   document.getElementById('local').innerText = d.produto?.localizacao || novoLocal;
   alert('Salvo com sucesso');
 }
+    </script>
+  </body>
+  </html>
+  `);
+});
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+});
