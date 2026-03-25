@@ -435,7 +435,7 @@ function obterSessao() {
 
 function aplicarLoginNaTela(usuario) {
   document.getElementById('sistema').style.display = 'block';
-  document.getElementById('tituloPagina').innerText = 'Sistema';
+  document.getElementById('tituloPagina').innerText = 'GOOD x Localização Estoque';
   document.getElementById('usuario').style.display = 'none';
   document.getElementById('senha').style.display = 'none';
   document.getElementById('chkMostrarSenha').parentElement.style.display = 'none';
