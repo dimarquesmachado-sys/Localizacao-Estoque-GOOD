@@ -392,7 +392,7 @@ app.get('/celular', (req, res) => {
       <input type="text" id="novoLocal" placeholder="Nova localização" onkeypress="if(event.key==='Enter'){salvar();}" />
       <button onclick="salvar()">Salvar</button>
 
-      <img id="imagem" />
+      <img id="imagem" style="display:none; width:100%; margin-top:10px;" />
     </div>
 <audio id="somOk">
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
@@ -412,24 +412,41 @@ app.get('/celular', (req, res) => {
   }
 
   function tocarSom(tipo) {
-    if (tipo === 'ok') {
-      const som = document.getElementById('somOk');
-      if (som) {
-        som.currentTime = 0;
-        som.play().catch(() => {});
-      }
-    } else {
-      const som = document.getElementById('somErro');
-      if (som) {
-        som.currentTime = 0;
-        som.play().catch(() => {});
-        setTimeout(() => {
-          som.currentTime = 0;
-          som.play().catch(() => {});
-        }, 200);
-      }
+  if (tipo === 'ok') {
+    const som = document.getElementById('somOk');
+    if (som) {
+      som.currentTime = 0;
+      som.play().catch(() => {});
+    }
+    return;
+  }
+
+  if (tipo === 'erro') {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(220, ctx.currentTime);
+      osc.frequency.linearRampToValueAtTime(140, ctx.currentTime + 0.18);
+
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.20);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.20);
+    } catch (e) {
+      console.log('Erro ao tocar som de erro:', e);
     }
   }
+}
 
   async function login() {
     try {
@@ -478,7 +495,14 @@ app.get('/celular', (req, res) => {
     document.getElementById('nome').innerText = d.produto.nome || '';
     document.getElementById('estoque').innerText = d.produto.estoque ?? '';
     document.getElementById('local').innerText = d.produto.localizacao || '';
-    document.getElementById('imagem').src = d.produto.imagem || '';
+    const img = document.getElementById('imagem');
+if (d.produto.imagem) {
+  img.src = d.produto.imagem;
+  img.style.display = 'block';
+} else {
+  img.src = '';
+  img.style.display = 'none';
+}
     idProduto = d.produto.id || null;
 
     document.getElementById('novoLocal').focus();
@@ -520,6 +544,7 @@ app.get('/celular', (req, res) => {
     document.getElementById('estoque').innerText = '';
     document.getElementById('local').innerText = '';
     document.getElementById('imagem').src = '';
+document.getElementById('imagem').style.display = 'none';
     idProduto = null;
 
     document.getElementById('sku').focus();
