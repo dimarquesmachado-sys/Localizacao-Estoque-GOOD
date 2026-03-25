@@ -531,6 +531,7 @@ function sair() {
 
   if (!d.ok || !d.produto) {
     tocarSom('erro');
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     alert(d.erro || 'Produto não encontrado');
     return;
   }
@@ -580,7 +581,7 @@ function sair() {
     tocarSom('ok');
 
     if (navigator.vibrate) {
-      navigator.vibrate(200);
+      navigator.vibrate([80, 40, 80]);
     }
 
     alert('Salvo com sucesso');
