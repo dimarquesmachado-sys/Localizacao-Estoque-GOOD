@@ -425,10 +425,10 @@ app.get('/celular', (req, res) => {
   }
 
   document.getElementById('nome').innerText = d.produto.nome || '';
-  document.getElementById('estoque').innerText = d.produto.estoque ?? '';
-  document.getElementById('local').innerText = d.produto.localizacao || '';
-  document.getElementById('imagem').src = d.produto.imagem || '';
-  idProduto = d.produto.id || null;
+document.getElementById('estoque').innerText = d.produto.estoque ?? '';
+document.getElementById('local').innerText = d.produto.localizacao || '';
+document.getElementById('imagem').src = d.produto.imagem || '';
+idProduto = d.produto.id || null;
 }
 
       async function salvar() {
