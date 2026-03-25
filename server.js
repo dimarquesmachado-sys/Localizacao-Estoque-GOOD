@@ -402,139 +402,129 @@ app.get('/celular', (req, res) => {
   <source src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg" type="audio/ogg">
 </audio>
 
-    <script>
-      let idProduto = null;
-      function toggleSenha() {
-  const campo = document.getElementById('senha');
-  if (!campo) return;
-  campo.type = campo.type === 'password' ? 'text' : 'password';
-}
-      function tocarSom(tipo) {
-  if (tipo === 'ok') {
-    const som = document.getElementById('somOk');
-    som.currentTime = 0;
-    som.play();
+   <script>
+  let idProduto = null;
+
+  function toggleSenha() {
+    const campo = document.getElementById('senha');
+    if (!campo) return;
+    campo.type = campo.type === 'password' ? 'text' : 'password';
   }
 
-  if (tipo === 'erro') {
-    const som = document.getElementById('somErro');
-    som.currentTime = 0;
-    som.play();
-    setTimeout(() => {
-      som.currentTime = 0;
-      som.play();
-    }, 200);
+  function tocarSom(tipo) {
+    if (tipo === 'ok') {
+      const som = document.getElementById('somOk');
+      if (som) {
+        som.currentTime = 0;
+        som.play().catch(() => {});
+      }
+    } else {
+      const som = document.getElementById('somErro');
+      if (som) {
+        som.currentTime = 0;
+        som.play().catch(() => {});
+        setTimeout(() => {
+          som.currentTime = 0;
+          som.play().catch(() => {});
+        }, 200);
+      }
+    }
   }
-}
-function toggleSenha() {
-  const campo = document.getElementById('senha');
-  campo.type = campo.type === 'password' ? 'text' : 'password';
-}
-      async function login() {
-  try {
-    const usuario = document.getElementById('usuario').value.trim();
-    const senha = document.getElementById('senha').value;
 
-    const r = await fetch('/login', {
+  async function login() {
+    try {
+      const usuario = document.getElementById('usuario').value.trim();
+      const senha = document.getElementById('senha').value;
+
+      const r = await fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario, senha })
+      });
+
+      const d = await r.json().catch(() => ({}));
+
+      if (r.status === 200) {
+        document.getElementById('sistema').style.display = 'block';
+        document.getElementById('tituloPagina').innerText = 'Sistema';
+        document.getElementById('usuario').style.display = 'none';
+        document.getElementById('senha').style.display = 'none';
+        document.getElementById('chkMostrarSenha').parentElement.style.display = 'none';
+        document.getElementById('btnEntrar').style.display = 'none';
+        document.getElementById('sku').focus();
+      } else {
+        tocarSom('erro');
+        alert(d.mensagem || 'Login inválido');
+      }
+    } catch (e) {
+      alert('Erro no login: ' + e.message);
+    }
+  }
+
+  async function buscar() {
+    const sku = document.getElementById('sku').value.trim();
+
+    const r = await fetch('/buscar?key=GIRASSOL_ESTOQUE_2026&tipo=SKU&codigo=' + encodeURIComponent(sku));
+    const d = await r.json();
+
+    if (!d.ok || !d.produto) {
+      tocarSom('erro');
+      alert(d.erro || 'Produto não encontrado');
+      return;
+    }
+
+    tocarSom('ok');
+
+    document.getElementById('nome').innerText = d.produto.nome || '';
+    document.getElementById('estoque').innerText = d.produto.estoque ?? '';
+    document.getElementById('local').innerText = d.produto.localizacao || '';
+    document.getElementById('imagem').src = d.produto.imagem || '';
+    idProduto = d.produto.id || null;
+
+    document.getElementById('novoLocal').focus();
+  }
+
+  async function salvar() {
+    const sku = document.getElementById('sku').value.trim();
+    const novoLocal = document.getElementById('novoLocal').value.trim();
+
+    const r = await fetch('/salvar', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ usuario, senha })
+      body: JSON.stringify({
+        key: 'GIRASSOL_ESTOQUE_2026',
+        codigo: sku,
+        novaLocalizacao: novoLocal
+      })
     });
 
-    const d = await r.json().catch(() => ({}));
+    const d = await r.json();
 
-    if (r.status === 200) {
-      document.getElementById('sistema').style.display = 'block';
-      document.getElementById('tituloPagina').innerText = 'Sistema';
-      document.getElementById('usuario').style.display = 'none';
-      document.getElementById('senha').style.display = 'none';
-      document.getElementById('chkMostrarSenha').parentElement.style.display = 'none';
-      document.getElementById('btnEntrar').style.display = 'none';
-    } else {
-      alert(d.mensagem || 'Login inválido');
-    }
-  } catch (e) {
-    alert('Erro no login: ' + e.message);
-  }
-}
-
-      async function buscar() {
-  const sku = document.getElementById('sku').value.trim();
-
-  const r = await fetch('/buscar?key=GIRASSOL_ESTOQUE_2026&tipo=SKU&codigo=' + encodeURIComponent(sku));
-  const d = await r.json();
-
-  if (!d.ok || !d.produto) {
-  tocarSom('erro');
-  alert(d.erro || 'Produto não encontrado');
-  return;
-}
-
-tocarSom('ok');
-    alert(d.erro || 'Produto não encontrado');
-    return;
-  }
-
-  document.getElementById('nome').innerText = d.produto.nome || '';
-  document.getElementById('estoque').innerText = d.produto.estoque ?? '';
-  document.getElementById('local').innerText = d.produto.localizacao || '';
-  document.getElementById('imagem').src = d.produto.imagem || '';
-  idProduto = d.produto.id || null;
-}
-
-      async function salvar() {
-  const sku = document.getElementById('sku').value.trim();
-  const novoLocal = document.getElementById('novoLocal').value.trim();
-
-  const r = await fetch('/salvar', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      key: 'GIRASSOL_ESTOQUE_2026',
-      codigo: sku,
-      novaLocalizacao: novoLocal
-    })
-  });
-
-  const d = await r.json();
-
-  if (!d.ok) {
     if (!d.ok) {
-  tocarSom('erro');
-  alert(d.erro || 'Erro ao salvar');
-  return;
-}
+      tocarSom('erro');
+      alert(d.erro || 'Erro ao salvar');
+      return;
+    }
 
-  alert('Salvo com sucesso');
+    tocarSom('ok');
 
-if (navigator.vibrate) {
-  navigator.vibrate(200);
-}
+    if (navigator.vibrate) {
+      navigator.vibrate(200);
+    }
 
-  // LIMPAR TELA
-  document.getElementById('sku').value = '';
-  document.getElementById('novoLocal').value = '';
-  document.getElementById('nome').innerText = '';
-  document.getElementById('estoque').innerText = '';
-  document.getElementById('local').innerText = '';
-  document.getElementById('imagem').src = '';
-  idProduto = null;
+    alert('Salvo com sucesso');
 
-  // CURSOR VOLTA PRO SKU
-  document.getElementById('sku').focus();
-}
+    document.getElementById('sku').value = '';
+    document.getElementById('novoLocal').value = '';
+    document.getElementById('nome').innerText = '';
+    document.getElementById('estoque').innerText = '';
+    document.getElementById('local').innerText = '';
+    document.getElementById('imagem').src = '';
+    idProduto = null;
 
-  const d = await r.json();
-
-  if (!d.ok) {
-    alert(d.erro || 'Erro ao salvar');
-    return;
+    document.getElementById('sku').focus();
   }
-
-  document.getElementById('local').innerText = d.produto?.localizacao || novoLocal;
-  alert('Salvo com sucesso');
-}
-    </script>
+</script>
   </body>
   </html>
   `);
