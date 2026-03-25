@@ -1,11 +1,344 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Bling Localização</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GOOD x Localização</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f5f5f5;
+      color: #111;
+    }
+    .wrap {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+    .topo {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0;
+      font-weight: 700;
+    }
+    .btn-sair,
+    .btn,
+    .btn-sec {
+      width: 100%;
+      border: 1px solid #bdbdbd;
+      background: #fff;
+      border-radius: 8px;
+      padding: 18px 14px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .btn-sair {
+      width: auto;
+      padding: 14px 18px;
+      font-size: 16px;
+    }
+    .campo,
+    select {
+      width: 100%;
+      border: 1px solid #bdbdbd;
+      border-radius: 8px;
+      padding: 18px 14px;
+      font-size: 18px;
+      background: #fff;
+      margin-bottom: 14px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 16px;
+      margin: 18px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .linha {
+      margin: 6px 0;
+      font-size: 18px;
+      line-height: 1.35;
+    }
+    .linha strong {
+      font-weight: 700;
+    }
+    .imagem-box {
+      margin-top: 18px;
+    }
+    .imagem-produto {
+      width: 100%;
+      border-radius: 8px;
+      display: none;
+      background: #fff;
+    }
+    .status {
+      margin: 12px 0 0;
+      font-size: 16px;
+      min-height: 22px;
+    }
+    .erro { color: #b00020; }
+    .ok { color: #0a7a28; }
+
+    .login-box {
+      background: #fff;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+      margin-top: 24px;
+    }
+
+    .hidden { display: none !important; }
+  </style>
 </head>
 <body>
-  <h2>Tela Celular OK</h2>
-  <p>Se você está vendo isso, o /celular funcionou.</p>
+  <div class="wrap">
+    <div id="telaLogin" class="login-box">
+      <h1 style="font-size: 26px; margin-bottom: 18px;">Entrar</h1>
+      <input id="usuario" class="campo" type="text" placeholder="Usuário" />
+      <input id="senha" class="campo" type="password" placeholder="Senha" />
+      <button id="btnLogin" class="btn">Entrar</button>
+      <div id="statusLogin" class="status"></div>
+    </div>
+
+    <div id="telaApp" class="hidden">
+      <div class="topo">
+        <h1>GOOD x Localização</h1>
+        <button id="btnSair" class="btn-sair">Sair</button>
+      </div>
+
+      <select id="tipoBusca" class="campo">
+        <option value="SKU">Buscar por SKU</option>
+        <option value="EAN">Buscar por EAN</option>
+      </select>
+
+      <input id="codigoBusca" class="campo" type="text" placeholder="Digite SKU ou EAN" />
+      <button id="btnBuscar" class="btn">Buscar</button>
+
+      <div id="cardProduto" class="card hidden">
+        <div class="linha"><strong>Produto:</strong> <span id="nomeProduto"></span></div>
+        <div class="linha"><strong>SKU:</strong> <span id="skuProduto"></span></div>
+        <div class="linha"><strong>EAN:</strong> <span id="eanProduto"></span></div>
+        <div class="linha"><strong>Estoque:</strong> <span id="estoqueProduto"></span></div>
+        <div class="linha"><strong>Local atual:</strong> <span id="localProduto"></span></div>
+      </div>
+
+      <input id="novaLocalizacao" class="campo hidden" type="text" placeholder="Nova localização" />
+      <button id="btnSalvar" class="btn hidden">Salvar</button>
+
+      <div class="imagem-box">
+        <img id="imagemProduto" class="imagem-produto" alt="Produto" />
+      </div>
+
+      <div id="statusApp" class="status"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const API_KEY = "COLE_AQUI_SUA_API_KEY_EXATA";
+
+    let produtoAtual = null;
+
+    const telaLogin = document.getElementById("telaLogin");
+    const telaApp = document.getElementById("telaApp");
+
+    const usuario = document.getElementById("usuario");
+    const senha = document.getElementById("senha");
+    const btnLogin = document.getElementById("btnLogin");
+    const statusLogin = document.getElementById("statusLogin");
+
+    const tipoBusca = document.getElementById("tipoBusca");
+    const codigoBusca = document.getElementById("codigoBusca");
+    const btnBuscar = document.getElementById("btnBuscar");
+    const btnSalvar = document.getElementById("btnSalvar");
+    const btnSair = document.getElementById("btnSair");
+    const novaLocalizacao = document.getElementById("novaLocalizacao");
+    const statusApp = document.getElementById("statusApp");
+
+    const cardProduto = document.getElementById("cardProduto");
+    const nomeProduto = document.getElementById("nomeProduto");
+    const skuProduto = document.getElementById("skuProduto");
+    const eanProduto = document.getElementById("eanProduto");
+    const estoqueProduto = document.getElementById("estoqueProduto");
+    const localProduto = document.getElementById("localProduto");
+    const imagemProduto = document.getElementById("imagemProduto");
+
+    function setStatus(el, msg, tipo = "") {
+      el.textContent = msg || "";
+      el.className = "status" + (tipo ? " " + tipo : "");
+    }
+
+    function mostrarApp() {
+      telaLogin.classList.add("hidden");
+      telaApp.classList.remove("hidden");
+    }
+
+    function mostrarLogin() {
+      telaApp.classList.add("hidden");
+      telaLogin.classList.remove("hidden");
+    }
+
+    function limparProduto() {
+      produtoAtual = null;
+      cardProduto.classList.add("hidden");
+      novaLocalizacao.classList.add("hidden");
+      btnSalvar.classList.add("hidden");
+      imagemProduto.style.display = "none";
+      imagemProduto.src = "";
+      nomeProduto.textContent = "";
+      skuProduto.textContent = "";
+      eanProduto.textContent = "";
+      estoqueProduto.textContent = "";
+      localProduto.textContent = "";
+    }
+
+    function preencherProduto(p) {
+      produtoAtual = p;
+      nomeProduto.textContent = p.nome || "";
+      skuProduto.textContent = p.codigo || "";
+      eanProduto.textContent = p.ean || "";
+      estoqueProduto.textContent = p.estoque ?? "";
+      localProduto.textContent = p.localizacao || "";
+      cardProduto.classList.remove("hidden");
+      novaLocalizacao.classList.remove("hidden");
+      btnSalvar.classList.remove("hidden");
+
+      if (p.imagem) {
+        imagemProduto.src = p.imagem;
+        imagemProduto.style.display = "block";
+      } else {
+        imagemProduto.style.display = "none";
+        imagemProduto.src = "";
+      }
+    }
+
+    btnLogin.addEventListener("click", async () => {
+      setStatus(statusLogin, "Entrando...");
+      try {
+        const resp = await fetch(API_BASE + "/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            usuario: usuario.value.trim(),
+            senha: senha.value
+          })
+        });
+
+        const data = await resp.json();
+
+        if (!resp.ok || !data.sucesso) {
+          setStatus(statusLogin, data.mensagem || "Login inválido", "erro");
+          return;
+        }
+
+        localStorage.setItem("bling_login_ok", "1");
+        localStorage.setItem("bling_usuario", data.usuario || "");
+        setStatus(statusLogin, "Login OK", "ok");
+        mostrarApp();
+      } catch (e) {
+        setStatus(statusLogin, "Erro no login: " + e.message, "erro");
+      }
+    });
+
+    btnBuscar.addEventListener("click", async () => {
+      const codigo = codigoBusca.value.trim();
+      const tipo = tipoBusca.value;
+
+      limparProduto();
+
+      if (!codigo) {
+        setStatus(statusApp, "Digite um código para buscar.", "erro");
+        return;
+      }
+
+      setStatus(statusApp, "Buscando...");
+
+      try {
+        const url = API_BASE + "/buscar?key=" + encodeURIComponent(API_KEY)
+          + "&tipo=" + encodeURIComponent(tipo)
+          + "&codigo=" + encodeURIComponent(codigo);
+
+        const resp = await fetch(url);
+        const data = await resp.json();
+
+        if (!data.ok || !data.produto) {
+          setStatus(statusApp, data.erro || "Produto não encontrado.", "erro");
+          return;
+        }
+
+        preencherProduto(data.produto);
+        setStatus(statusApp, "Produto encontrado.", "ok");
+      } catch (e) {
+        setStatus(statusApp, "Erro ao buscar: " + e.message, "erro");
+      }
+    });
+
+    btnSalvar.addEventListener("click", async () => {
+      if (!produtoAtual) {
+        setStatus(statusApp, "Nenhum produto carregado.", "erro");
+        return;
+      }
+
+      const nova = novaLocalizacao.value.trim();
+      if (!nova) {
+        setStatus(statusApp, "Digite a nova localização.", "erro");
+        return;
+      }
+
+      setStatus(statusApp, "Salvando...");
+
+      try {
+        const resp = await fetch(API_BASE + "/salvar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: API_KEY,
+            tipo: tipoBusca.value,
+            codigo: codigoBusca.value.trim(),
+            novaLocalizacao: nova
+          })
+        });
+
+        const data = await resp.json();
+
+        if (!data.ok) {
+          setStatus(statusApp, data.erro || "Erro ao salvar.", "erro");
+          return;
+        }
+
+        localProduto.textContent = nova;
+        novaLocalizacao.value = "";
+        setStatus(statusApp, "Localização salva com sucesso.", "ok");
+      } catch (e) {
+        setStatus(statusApp, "Erro ao salvar: " + e.message, "erro");
+      }
+    });
+
+    btnSair.addEventListener("click", () => {
+      localStorage.removeItem("bling_login_ok");
+      localStorage.removeItem("bling_usuario");
+      limparProduto();
+      usuario.value = "";
+      senha.value = "";
+      codigoBusca.value = "";
+      novaLocalizacao.value = "";
+      setStatus(statusApp, "");
+      setStatus(statusLogin, "");
+      mostrarLogin();
+    });
+
+    if (localStorage.getItem("bling_login_ok") === "1") {
+      mostrarApp();
+    } else {
+      mostrarLogin();
+    }
+  </script>
 </body>
 </html>
