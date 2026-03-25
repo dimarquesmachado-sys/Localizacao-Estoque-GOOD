@@ -370,6 +370,10 @@ app.get('/celular', (req, res) => {
     <h2>Login</h2>
     <input type="text" id="usuario" placeholder="Usuário" />
     <input type="password" id="senha" placeholder="Senha" />
+<label style="display:block; margin-top:8px; font-size:16px;">
+  <input type="checkbox" onclick="toggleSenha()" style="width:auto; margin-right:8px;" />
+  Mostrar senha
+</label>
     <button onclick="login()">Entrar</button>
 
     <div id="sistema">
@@ -391,7 +395,10 @@ app.get('/celular', (req, res) => {
 
     <script>
       let idProduto = null;
-
+function toggleSenha() {
+  const campo = document.getElementById('senha');
+  campo.type = campo.type === 'password' ? 'text' : 'password';
+}
       async function login() {
         const usuario = document.getElementById('usuario').value;
         const senha = document.getElementById('senha').value;
