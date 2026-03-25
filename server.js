@@ -414,31 +414,44 @@ app.get('/celular', (req, res) => {
       }
 
       async function buscar() {
-        const sku = document.getElementById('sku').value;
-        const r = await fetch('/buscar?sku=' + sku);
-        const d = await r.json();
+  const sku = document.getElementById('sku').value.trim();
 
-        document.getElementById('nome').innerText = d.nome;
-        document.getElementById('estoque').innerText = d.estoque;
-        document.getElementById('local').innerText = d.localizacao;
-        document.getElementById('imagem').src = d.imagem;
-        idProduto = d.idProduto;
-      }
+  const r = await fetch('/buscar?key=SUA_API_KEY_AQUI&tipo=SKU&codigo=' + encodeURIComponent(sku));
+  const d = await r.json();
+
+  if (!d.ok || !d.produto) {
+    alert(d.erro || 'Produto não encontrado');
+    return;
+  }
+
+  document.getElementById('nome').innerText = d.produto.nome || '';
+  document.getElementById('estoque').innerText = d.produto.estoque ?? '';
+  document.getElementById('local').innerText = d.produto.localizacao || '';
+  document.getElementById('imagem').src = d.produto.imagem || '';
+  idProduto = d.produto.id || null;
+}
 
       async function salvar() {
-        const novoLocal = document.getElementById('novoLocal').value;
-        await fetch('/salvar', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ idProduto, localizacao: novoLocal })
-        });
-        alert('Salvo com sucesso');
-      }
-    </script>
-  </body>
-  </html>
-  `);
-});
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
+  const sku = document.getElementById('sku').value.trim();
+  const novoLocal = document.getElementById('novoLocal').value.trim();
+
+  const r = await fetch('/salvar', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      key: 'SUA_API_KEY_AQUI',
+      codigo: sku,
+      novaLocalizacao: novoLocal
+    })
+  });
+
+  const d = await r.json();
+
+  if (!d.ok) {
+    alert(d.erro || 'Erro ao salvar');
+    return;
+  }
+
+  document.getElementById('local').innerText = d.produto?.localizacao || novoLocal;
+  alert('Salvo com sucesso');
+}
