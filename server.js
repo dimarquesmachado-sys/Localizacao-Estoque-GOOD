@@ -226,7 +226,29 @@ app.get("/buscar", async (req, res) => {
       });
     }
 
-    const produtoLista = busca.data.data[0];
+    const codigoNormalizado = String(codigo).trim().toLowerCase();
+
+const produtoLista = busca.data.data.find((item) => {
+  const codigoItem = String(item.codigo || '').trim().toLowerCase();
+  const gtinItem = String(item.gtin || item.codigoBarras || '').trim().toLowerCase();
+
+  if (tipo === 'SKU') {
+    return codigoItem === codigoNormalizado;
+  }
+
+  if (tipo === 'EAN') {
+    return gtinItem === codigoNormalizado;
+  }
+
+  return false;
+});
+
+if (!produtoLista) {
+  return res.json({
+    ok: false,
+    erro: "Produto não encontrado"
+  });
+}
     const id = produtoLista.id;
 
     const detalhe = await blingRequest(
@@ -552,6 +574,11 @@ function sair() {
 
   async function buscar() {
   const codigoDigitado = document.getElementById('sku').value.trim();
+  if (codigoDigitado.length < 2) {
+  tocarSom('erro');
+  mostrarToast('Digite ao menos 2 caracteres', 'erro');
+  return;
+}
 
   let r = await fetch('/buscar?key=GIRASSOL_ESTOQUE_2026&tipo=SKU&codigo=' + encodeURIComponent(codigoDigitado));
   let d = await r.json();
