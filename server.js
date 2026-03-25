@@ -68,8 +68,8 @@ function extractImage(produto) {
     produto?.imagensExternas?.[0]?.url ||
     produto?.imagens?.[0]?.link ||
     produto?.imagens?.[0]?.url ||
-    produto?.midia?.[0]?.url ||
     produto?.midia?.[0]?.link ||
+    produto?.midia?.[0]?.url ||
     ""
   );
 }
@@ -283,7 +283,7 @@ async function resolverProduto(tipo, valor) {
           `https://api.bling.com.br/Api/v3/produtos?codigoBarras=${encodeURIComponent(valorOriginal)}`
         ];
 
-  const idsTestados = new Set();
+  const idsJaTentados = new Set();
 
   for (const url of urlsBusca) {
     const tentativa = await listarProdutosPorUrl(url, accessTokenAtual);
@@ -292,49 +292,27 @@ async function resolverProduto(tipo, valor) {
     if (!tentativa.response.ok) continue;
 
     const lista = tentativa.data?.data || [];
+    if (!lista.length) continue;
 
-    for (const item of lista) {
-      if (!item?.id) continue;
-      if (idsTestados.has(item.id)) continue;
-      idsTestados.add(item.id);
-
-      let bateNaLista = false;
+    const candidatosExatos = lista.filter((item) => {
+      if (!item?.id || idsJaTentados.has(item.id)) return false;
 
       if (tipoBusca === "SKU") {
-        bateNaLista = matchSkuExato(item, valorOriginal);
-      } else {
-        bateNaLista = matchEanExato(item, valorOriginal);
+        return matchSkuExato(item, valorOriginal);
       }
 
-      if (!bateNaLista) {
-        const detalhe = await buscarDetalheProduto(item.id, accessTokenAtual);
-        if (!detalhe?.produto) continue;
+      return matchEanExato(item, valorOriginal);
+    });
 
-        accessTokenAtual = detalhe.accessToken;
-
-        const p = detalhe.produto;
-        const bateNoDetalhe =
-          tipoBusca === "SKU"
-            ? matchSkuExato(p, valorOriginal)
-            : matchEanExato(p, valorOriginal);
-
-        if (bateNoDetalhe) {
-          return {
-            ok: true,
-            produto: p,
-            accessToken: accessTokenAtual
-          };
-        }
-
-        continue;
-      }
+    for (const item of candidatosExatos) {
+      idsJaTentados.add(item.id);
 
       const detalhe = await buscarDetalheProduto(item.id, accessTokenAtual);
       if (!detalhe?.produto) continue;
 
       accessTokenAtual = detalhe.accessToken;
-
       const p = detalhe.produto;
+
       const confirma =
         tipoBusca === "SKU"
           ? matchSkuExato(p, valorOriginal)
