@@ -367,14 +367,16 @@ app.get('/celular', (req, res) => {
     </style>
   </head>
   <body>
-    <h2>Login</h2>
-    <input type="text" id="usuario" placeholder="Usuário" />
-    <input type="password" id="senha" placeholder="Senha" />
+    <h2 id="tituloPagina">Login</h2>
+<input type="text" id="usuario" placeholder="Usuário" />
+<input type="password" id="senha" placeholder="Senha" />
+
 <label style="display:block; margin-top:8px; font-size:16px;">
-  <input type="checkbox" onclick="toggleSenha()" style="width:auto; margin-right:8px;" />
+  <input type="checkbox" id="chkMostrarSenha" style="width:auto; margin-right:8px;" onchange="toggleSenha()" />
   Mostrar senha
 </label>
-    <button onclick="login()">Entrar</button>
+
+<button id="btnEntrar" onclick="login()">Entrar</button>
 
     <div id="sistema">
       <h2>Localização de Produtos</h2>
@@ -402,6 +404,11 @@ app.get('/celular', (req, res) => {
 
     <script>
       let idProduto = null;
+      function toggleSenha() {
+  const campo = document.getElementById('senha');
+  if (!campo) return;
+  campo.type = campo.type === 'password' ? 'text' : 'password';
+}
       function tocarSom(tipo) {
   if (tipo === 'ok') {
     const som = document.getElementById('somOk');
@@ -424,25 +431,32 @@ function toggleSenha() {
   campo.type = campo.type === 'password' ? 'text' : 'password';
 }
       async function login() {
-        const usuario = document.getElementById('usuario').value;
-        const senha = document.getElementById('senha').value;
+  try {
+    const usuario = document.getElementById('usuario').value.trim();
+    const senha = document.getElementById('senha').value;
 
-        const r = await fetch('/login', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ usuario, senha })
-        });
+    const r = await fetch('/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, senha })
+    });
 
-        if (r.status === 200) {
-          document.getElementById('sistema').style.display = 'block';
-          document.querySelector('h2').innerText = 'Sistema';
-          document.getElementById('usuario').style.display = 'none';
-          document.getElementById('senha').style.display = 'none';
-          document.querySelector('button').style.display = 'none';
-        } else {
-          alert('Login inválido');
-        }
-      }
+    const d = await r.json().catch(() => ({}));
+
+    if (r.status === 200) {
+      document.getElementById('sistema').style.display = 'block';
+      document.getElementById('tituloPagina').innerText = 'Sistema';
+      document.getElementById('usuario').style.display = 'none';
+      document.getElementById('senha').style.display = 'none';
+      document.getElementById('chkMostrarSenha').parentElement.style.display = 'none';
+      document.getElementById('btnEntrar').style.display = 'none';
+    } else {
+      alert(d.mensagem || 'Login inválido');
+    }
+  } catch (e) {
+    alert('Erro no login: ' + e.message);
+  }
+}
 
       async function buscar() {
   const sku = document.getElementById('sku').value.trim();
