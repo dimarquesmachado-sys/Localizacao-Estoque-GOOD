@@ -360,7 +360,7 @@ async function resolverProduto(tipo, valor) {
           };
         }
       }
-        } else {
+    } else {
       const candidatos = lista
         .filter((item) => item?.id && !idsJaTentados.has(item.id))
         .slice(0, 15);
@@ -383,6 +383,7 @@ async function resolverProduto(tipo, valor) {
         }
       }
     }
+  }
 
   return { ok: false, erro: "Produto não encontrado" };
 }
