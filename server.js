@@ -11,6 +11,69 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT = process.env.PORT || 10000;
 const API_KEY = process.env.API_KEY;
 
+// ================= RENDER API =================
+const RENDER_API_KEY = "rnd_1NUSsu0O0VLBaf0sEFgo8gE4epHT";
+const RENDER_SERVICE_ID = "srv-d71m8ot5pdvs7381m9l0";
+
+async function atualizarVariavelRender(chave, valor) {
+  try {
+    console.log(`[RENDER] Atualizando variável ${chave} no Render...`);
+
+    // 1. Busca as variáveis atuais
+    const getResp = await fetch(
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/env-vars`,
+      {
+        headers: {
+          Authorization: `Bearer ${RENDER_API_KEY}`,
+          Accept: "application/json"
+        }
+      }
+    );
+
+    if (!getResp.ok) {
+      console.error("[RENDER] Erro ao buscar variáveis:", getResp.status);
+      return false;
+    }
+
+    const envVars = await getResp.json();
+
+    // 2. Monta array atualizado com o novo valor
+    const atualizadas = envVars.map(item => ({
+      key: item.envVar?.key || item.key,
+      value: (item.envVar?.key || item.key) === chave
+        ? valor
+        : (item.envVar?.value || item.value || "")
+    }));
+
+    // 3. Envia todas de volta com o valor atualizado
+    const putResp = await fetch(
+      `https://api.render.com/v1/services/${RENDER_SERVICE_ID}/env-vars`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${RENDER_API_KEY}`,
+          "Content-Type": "application/json",
+          Accept: "application/json"
+        },
+        body: JSON.stringify(atualizadas)
+      }
+    );
+
+    if (!putResp.ok) {
+      const erro = await putResp.text();
+      console.error("[RENDER] Erro ao atualizar variável:", putResp.status, erro);
+      return false;
+    }
+
+    console.log(`[RENDER] Variável ${chave} atualizada com sucesso!`);
+    return true;
+  } catch (e) {
+    console.error("[RENDER] Exceção ao atualizar variável:", e.message);
+    return false;
+  }
+}
+
+// ================= HELPERS =================
 function traduzirErroBling(msg) {
   const texto = String(msg || "").toLowerCase().trim();
   if (texto.includes("invalid refresh token")) return "Token de atualização do Bling inválido. Verifique BLING_REFRESH_TOKEN, BLING_CLIENT_ID e BLING_CLIENT_SECRET no Render.";
@@ -28,7 +91,6 @@ try {
   usuarios = [];
 }
 
-// ================= HELPERS =================
 function normalize(v) { return String(v || "").trim().toLowerCase(); }
 function onlyDigits(v) { return String(v || "").replace(/\D/g, ""); }
 function isExactCaseInsensitive(a, b) { return normalize(a) === normalize(b); }
@@ -115,9 +177,6 @@ async function renovarAccessToken() {
   const refreshToken = process.env.BLING_REFRESH_TOKEN;
 
   console.log("[TOKEN] Tentando renovar access token...");
-  console.log("[TOKEN] CLIENT_ID presente:", !!clientId);
-  console.log("[TOKEN] CLIENT_SECRET presente:", !!clientSecret);
-  console.log("[TOKEN] REFRESH_TOKEN presente:", !!refreshToken);
 
   if (!clientId || !clientSecret || !refreshToken) {
     throw new Error("Credenciais OAuth do Bling ausentes no Render.");
@@ -143,7 +202,6 @@ async function renovarAccessToken() {
   try { data = await response.json(); } catch { data = {}; }
 
   console.log("[TOKEN] Status da renovação:", response.status);
-  console.log("[TOKEN] Resposta do Bling:", JSON.stringify(data));
 
   if (!response.ok || !data?.access_token) {
     const msg = data?.error?.description || data?.error?.type || data?.message || "Falha ao renovar token";
@@ -151,15 +209,30 @@ async function renovarAccessToken() {
     throw new Error(traduzirErroBling(msg));
   }
 
-  console.log("[TOKEN] Token renovado com sucesso!");
+  const novoAccessToken = data.access_token;
+  const novoRefreshToken = data.refresh_token;
+
+  // Atualiza em memória imediatamente
+  process.env.BLING_ACCESS_TOKEN = novoAccessToken;
+  if (novoRefreshToken) {
+    process.env.BLING_REFRESH_TOKEN = novoRefreshToken;
+  }
+
+  console.log("[TOKEN] Token renovado! Salvando no Render...");
+
+  // Salva no Render para persistir entre deploys/reinicializações
+  await atualizarVariavelRender("BLING_ACCESS_TOKEN", novoAccessToken);
+  if (novoRefreshToken) {
+    await atualizarVariavelRender("BLING_REFRESH_TOKEN", novoRefreshToken);
+    console.log("[TOKEN] Refresh token também atualizado no Render.");
+  }
+
+  console.log("[TOKEN] Tokens salvos com sucesso no Render!");
   return data;
 }
 
 async function blingRequest(url, options = {}, accessToken = process.env.BLING_ACCESS_TOKEN) {
   let token = accessToken;
-
-  console.log("[BLING] Requisição para:", url.replace(/https:\/\/api\.bling\.com\.br/, ""));
-  console.log("[BLING] Token presente:", !!token, "| Primeiros 10 chars:", token ? token.substring(0, 10) + "..." : "VAZIO");
 
   async function doFetch(currentToken) {
     const response = await fetch(url, {
@@ -177,11 +250,7 @@ async function blingRequest(url, options = {}, accessToken = process.env.BLING_A
 
   let { response, data } = await doFetch(token);
 
-  console.log("[BLING] Status:", response.status);
-
-  if (!response.ok) {
-    console.warn("[BLING] Resposta não-ok:", JSON.stringify(data).substring(0, 300));
-  }
+  console.log("[BLING] Status:", response.status, url.split("?")[0].replace("https://api.bling.com.br/Api/v3", ""));
 
   const tokenInvalido =
     response.status === 401 ||
@@ -189,7 +258,7 @@ async function blingRequest(url, options = {}, accessToken = process.env.BLING_A
     /invalid_token/i.test(JSON.stringify(data || {}));
 
   if (tokenInvalido) {
-    console.log("[BLING] Token inválido detectado. Tentando renovar...");
+    console.log("[BLING] Token inválido. Renovando...");
     const novosTokens = await renovarAccessToken();
     token = novosTokens.access_token;
     const segunda = await doFetch(token);
@@ -229,10 +298,6 @@ async function resolverProduto(tipo, valor) {
   const valorOriginal = String(valor || "").trim();
   let accessTokenAtual = process.env.BLING_ACCESS_TOKEN;
 
-  console.log(`[BUSCA] Tipo: ${tipoBusca} | Valor: ${valorOriginal}`);
-  console.log("[BUSCA] BLING_ACCESS_TOKEN presente:", !!accessTokenAtual);
-  console.log("[BUSCA] API_KEY presente:", !!process.env.API_KEY);
-
   if (!valorOriginal) return { ok: false, erro: "Código não informado" };
 
   const urlsBusca =
@@ -253,13 +318,9 @@ async function resolverProduto(tipo, valor) {
     const tentativa = await listarProdutosPorUrl(url, accessTokenAtual);
     accessTokenAtual = tentativa.accessToken;
 
-    if (!tentativa.response.ok) {
-      console.warn("[BUSCA] URL falhou:", url.split("?")[1]);
-      continue;
-    }
+    if (!tentativa.response.ok) continue;
 
     const lista = tentativa.data?.data || [];
-    console.log(`[BUSCA] URL ok. Resultados: ${lista.length}`);
     if (!lista.length) continue;
 
     if (tipoBusca === "SKU") {
@@ -271,7 +332,6 @@ async function resolverProduto(tipo, valor) {
         accessTokenAtual = detalhe.accessToken;
         const p = detalhe.produto;
         if (matchSkuExato(p, valorOriginal)) {
-          console.log("[BUSCA] Produto encontrado por SKU:", p.codigo);
           return { ok: true, produto: p, accessToken: accessTokenAtual };
         }
       }
@@ -284,14 +344,12 @@ async function resolverProduto(tipo, valor) {
         accessTokenAtual = detalhe.accessToken;
         const p = detalhe.produto;
         if (matchEanExato(p, valorOriginal)) {
-          console.log("[BUSCA] Produto encontrado por EAN:", p.ean || p.gtin);
           return { ok: true, produto: p, accessToken: accessTokenAtual };
         }
       }
     }
   }
 
-  console.warn("[BUSCA] Produto não encontrado após todas as tentativas.");
   return { ok: false, erro: "Produto não encontrado" };
 }
 
@@ -300,12 +358,7 @@ app.get("/buscar", async (req, res) => {
   try {
     const { key, tipo, codigo } = req.query;
 
-    console.log("\n========== /buscar ==========");
-    console.log("tipo:", tipo, "| codigo:", codigo);
-    console.log("API_KEY bate:", key === API_KEY);
-
     if (!key || key !== API_KEY) {
-      console.error("[/buscar] API key inválida recebida:", key);
       return res.status(401).json({ ok: false, erro: "API key inválida" });
     }
 
@@ -331,21 +384,10 @@ app.get("/buscar", async (req, res) => {
         localizacao: extractLocalizacao(p),
         imagem: extractImage(p),
         ean: getPossiveisGtins(p).find(Boolean) || ""
-      },
-      debug: {
-        id: p?.id || null, codigo: p?.codigo || p?.sku || null,
-        gtin: p?.gtin || null, ean: p?.ean || null,
-        codigoBarras: p?.codigoBarras || null, gtinEan: p?.gtinEan || null,
-        gtinTributario: p?.gtinTributario || null, codigo_barras: p?.codigo_barras || null,
-        imagemURL: p?.imagemURL || null, imagemUrl: p?.imagemUrl || null,
-        imagem: p?.imagem || null, linkImagem: p?.linkImagem || null,
-        urlImagem: p?.urlImagem || null, imagensExternas: p?.imagensExternas || null,
-        imagens: p?.imagens || null, midia: p?.midia || null, anexos: p?.anexos || null
       }
     });
   } catch (error) {
     console.error("[/buscar] ERRO:", error.message);
-    console.error(error.stack);
     return res.json({ ok: false, erro: traduzirErroBling(error.message) });
   }
 });
@@ -355,17 +397,12 @@ app.post("/salvar", async (req, res) => {
   try {
     const { key, codigo, tipo, novaLocalizacao } = req.body || {};
 
-    console.log("\n========== /salvar ==========");
-    console.log("codigo:", codigo, "| tipo:", tipo, "| novaLocalizacao:", novaLocalizacao);
-
     if (!key || key !== API_KEY) {
-      console.error("[/salvar] API key inválida");
       return res.status(401).json({ ok: false, erro: "API key inválida" });
     }
 
-    if (!String(novaLocalizacao || "").trim()) {
-      return res.json({ ok: false, erro: "Nova localização não informada" });
-    }
+    // Permite salvar string vazia (para apagar localização)
+    const localizacaoFinal = String(novaLocalizacao ?? "");
 
     let resultado = null;
     if (tipo && String(tipo).toUpperCase() === "EAN") {
@@ -380,22 +417,17 @@ app.post("/salvar", async (req, res) => {
     }
 
     const id = resultado.produto.id;
-    console.log("[/salvar] Atualizando produto ID:", id);
+    console.log("[/salvar] Atualizando produto ID:", id, "| localização:", `"${localizacaoFinal}"`);
 
     const patch = await blingRequest(
       `https://api.bling.com.br/Api/v3/produtos/${id}`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estoque: { localizacao: String(novaLocalizacao).trim() } })
+        body: JSON.stringify({ estoque: { localizacao: localizacaoFinal } })
       },
       resultado.accessToken
     );
-
-    console.log("[/salvar] Status do PATCH:", patch.response.status);
-    if (!patch.response.ok) {
-      console.error("[/salvar] Erro no PATCH:", JSON.stringify(patch.data));
-    }
 
     if (!patch.response.ok) {
       return res.json({
@@ -410,12 +442,11 @@ app.post("/salvar", async (req, res) => {
         id,
         codigo: resultado.produto.codigo || "",
         nome: resultado.produto.nome || "",
-        localizacao: String(novaLocalizacao).trim()
+        localizacao: localizacaoFinal
       }
     });
   } catch (error) {
     console.error("[/salvar] ERRO:", error.message);
-    console.error(error.stack);
     return res.json({ ok: false, erro: traduzirErroBling(error.message) });
   }
 });
@@ -435,4 +466,5 @@ app.listen(PORT, () => {
   console.log("BLING_REFRESH_TOKEN configurado:", !!process.env.BLING_REFRESH_TOKEN);
   console.log("BLING_CLIENT_ID configurado:", !!process.env.BLING_CLIENT_ID);
   console.log("BLING_CLIENT_SECRET configurado:", !!process.env.BLING_CLIENT_SECRET);
+  console.log("RENDER_API_KEY configurada:", !!RENDER_API_KEY);
 });
