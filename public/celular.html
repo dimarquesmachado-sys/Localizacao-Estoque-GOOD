@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GOOD x Localização</title>
-
   <style>
     * { box-sizing: border-box; }
 
@@ -31,9 +30,9 @@
 
     .box {
       background: white;
-      padding: 12px 14px;
+      padding: 15px;
       border-radius: 10px;
-      margin-top: 10px;
+      margin-top: 15px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
 
@@ -47,8 +46,6 @@
       border-radius: 10px;
       display: none;
       background: #fff;
-      max-height: 250px;
-      object-fit: contain;
     }
 
     #toast {
@@ -98,7 +95,6 @@
       color: #000;
       border: 1px solid #ccc;
       border-radius: 8px;
-      flex-shrink: 0;
     }
 
     .linha-checkbox {
@@ -144,65 +140,6 @@
       border: 1px solid #ccc;
       border-radius: 8px;
     }
-
-    .linha-acao {
-      display: flex;
-      align-items: stretch;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .linha-acao input {
-      margin-top: 0;
-      flex: 1 1 auto;
-      min-width: 0;
-    }
-
-    .linha-acao button {
-      margin-top: 0;
-      width: 108px;
-      min-width: 108px;
-      padding: 0 12px;
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .info-produto {
-      line-height: 1.2;
-    }
-
-    .info-produto div {
-      margin: 4px 0;
-      word-break: break-word;
-    }
-
-    @media (max-width: 420px) {
-      body {
-        padding: 12px;
-      }
-
-      #tituloPagina {
-        font-size: 24px;
-      }
-
-      .linha-acao {
-        gap: 6px;
-      }
-
-      .linha-acao button {
-        width: 96px;
-        min-width: 96px;
-        font-size: 15px;
-      }
-
-      .box {
-        padding: 10px 12px;
-      }
-
-      #imagem {
-        max-height: 210px;
-      }
-    }
   </style>
 </head>
 <body>
@@ -230,19 +167,16 @@
   </div>
 
   <div id="sistema">
-    <div class="linha-acao">
-      <input
-        type="text"
-        id="sku"
-        placeholder="Bipar EAN ou digitar SKU"
-        onkeypress="if(event.key==='Enter'){buscar();}"
-        autofocus
-        autocomplete="off"
-      />
-      <button type="button" onclick="buscar()">Buscar</button>
-    </div>
+    <input
+      type="text"
+      id="sku"
+      placeholder="Bipar EAN ou digitar SKU"
+      onkeypress="if(event.key==='Enter'){buscar();}"
+      autofocus
+    />
+    <button onclick="buscar()">Buscar</button>
 
-    <div class="box info-produto">
+    <div class="box">
       <div><b>Produto:</b> <span id="nome"></span></div>
       <div><b>SKU:</b> <span id="codigo"></span></div>
       <div><b>EAN:</b> <span id="ean"></span></div>
@@ -250,18 +184,15 @@
       <div><b>Local atual:</b> <span id="local"></span></div>
     </div>
 
-    <div class="linha-acao">
-      <input
-        type="text"
-        id="novoLocal"
-        placeholder="Nova localização"
-        onkeypress="if(event.key==='Enter'){salvar();}"
-        autocomplete="off"
-      />
-      <button type="button" onclick="salvar()">Salvar</button>
-    </div>
+    <input
+      type="text"
+      id="novoLocal"
+      placeholder="Nova localização"
+      onkeypress="if(event.key==='Enter'){salvar();}"
+    />
+    <button onclick="salvar()">Salvar</button>
 
-    <img id="imagem" alt="Imagem do produto" />
+    <img id="imagem" />
   </div>
 
   <audio id="somOk" preload="auto">
@@ -452,7 +383,7 @@
       }
     }
 
-       async function buscar() {
+    async function buscar() {
       const codigoDigitado = document.getElementById("sku").value.trim();
 
       if (codigoDigitado.length < 2) {
@@ -505,7 +436,7 @@
       document.getElementById("novoLocal").focus();
     }
 
-        async function salvar() {
+    async function salvar() {
       const sku = codigoProdutoAtual || document.getElementById("sku").value.trim();
       const novoLocal = document.getElementById("novoLocal").value.trim();
 
@@ -523,31 +454,6 @@
         document.getElementById("novoLocal").focus();
         return;
       }
-
-      const r = await fetch("/salvar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: API_KEY,
-          codigo: sku,
-          novaLocalizacao: novoLocal
-        })
-      });
-
-      const d = await r.json();
-
-      if (!d.ok) {
-        tocarSom("erro");
-        vibrarErro();
-        mostrarToast(d.erro || "Erro ao salvar", "erro");
-        return;
-      }
-
-      tocarSom("ok");
-      vibrarOk();
-      mostrarToast("Salvo com sucesso", "ok");
-      limparTudoAposSalvar();
-    }
 
       const r = await fetch("/salvar", {
         method: "POST",
