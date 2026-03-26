@@ -505,7 +505,7 @@
       document.getElementById("novoLocal").focus();
     }
 
-    async function salvar() {
+        async function salvar() {
       const sku = codigoProdutoAtual || document.getElementById("sku").value.trim();
       const novoLocal = document.getElementById("novoLocal").value.trim();
 
@@ -523,6 +523,31 @@
         document.getElementById("novoLocal").focus();
         return;
       }
+
+      const r = await fetch("/salvar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: API_KEY,
+          codigo: sku,
+          novaLocalizacao: novoLocal
+        })
+      });
+
+      const d = await r.json();
+
+      if (!d.ok) {
+        tocarSom("erro");
+        vibrarErro();
+        mostrarToast(d.erro || "Erro ao salvar", "erro");
+        return;
+      }
+
+      tocarSom("ok");
+      vibrarOk();
+      mostrarToast("Salvo com sucesso", "ok");
+      limparTudoAposSalvar();
+    }
 
       const r = await fetch("/salvar", {
         method: "POST",
