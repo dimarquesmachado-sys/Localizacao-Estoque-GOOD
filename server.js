@@ -337,13 +337,12 @@ async function resolverProduto(tipo, valor) {
     const lista = tentativa.data?.data || [];
     if (!lista.length) continue;
 
-    if (tipoBusca === "SKU") {
-      const candidatosExatos = lista.filter((item) => {
-        if (!item?.id || idsJaTentados.has(item.id)) return false;
-        return matchSkuExato(item, valorOriginal);
-      });
+        if (tipoBusca === "SKU") {
+      const candidatos = lista
+        .filter((item) => item?.id && !idsJaTentados.has(item.id))
+        .slice(0, 20);
 
-      for (const item of candidatosExatos) {
+      for (const item of candidatos) {
         idsJaTentados.add(item.id);
 
         const detalhe = await buscarDetalheProduto(item.id, accessTokenAtual);
