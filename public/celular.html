@@ -500,118 +500,97 @@
       return d;
     }
 
-    async function buscar() {
-      const codigoDigitado = document.getElementById("sku").value.trim();
+  function normalizarCodigoBusca(valor) {
+  return String(valor || "")
+    .trim()
+    .replace(/[‐-‒–—−]/g, "-")   // normaliza tipos de hífen
+    .replace(/\s*-\s*/g, "-")    // tira espaços em volta do hífen
+    .replace(/\s+/g, " ");       // compacta espaços internos
+}
 
-      if (codigoDigitado.length < 3) {
-        limparPainelProduto();
-        marcarCampoBusca("erro");
-        tocarSom("erro");
-        vibrarErro();
-        mostrarToast("Digite ao menos 3 caracteres", "erro");
-        return;
+function montarVariacoesBusca(valorOriginal) {
+  const base = normalizarCodigoBusca(valorOriginal);
+  const variacoes = [
+    valorOriginal,
+    String(valorOriginal || "").trim(),
+    base,
+    base.toUpperCase()
+  ];
+
+  return [...new Set(variacoes.filter(Boolean))];
+}
+
+async function buscar() {
+  const codigoDigitado = document.getElementById("sku").value.trim();
+
+  if (codigoDigitado.length < 3) {
+    limparPainelProduto();
+    marcarCampoBusca("erro");
+    tocarSom("erro");
+    vibrarErro();
+    mostrarToast("Digite ao menos 3 caracteres", "erro");
+    return;
+  }
+
+  limparPainelProduto();
+  marcarCampoBusca("");
+
+  try {
+    const variacoes = montarVariacoesBusca(codigoDigitado);
+    let d = null;
+    let encontrado = false;
+
+    for (const tentativa of variacoes) {
+      const ordem = determinarOrdemBusca(tentativa);
+
+      for (const tipo of ordem) {
+        d = await consultarProduto(tipo, tentativa);
+
+        if (d && d.ok && d.produto) {
+          encontrado = true;
+          break;
+        }
       }
 
-      limparPainelProduto();
-      marcarCampoBusca("");
-
-      try {
-        const ordem = determinarOrdemBusca(codigoDigitado);
-        let d = null;
-
-        for (const tipo of ordem) {
-          d = await consultarProduto(tipo, codigoDigitado);
-          if (d && d.ok && d.produto) {
-            break;
-          }
-        }
-
-        if (!d || !d.ok || !d.produto) {
-          marcarCampoBusca("erro");
-          tocarSom("erro");
-          vibrarErro();
-          mostrarToast((d && d.erro) || "Produto não encontrado", "erro");
-          return;
-        }
-
-        marcarCampoBusca("ok");
-        tocarSom("ok");
-
-        document.getElementById("nome").innerText = d.produto.nome || "";
-        document.getElementById("codigo").innerText = d.produto.codigo || "";
-        document.getElementById("ean").innerText = d.produto.ean || "";
-        document.getElementById("estoque").innerText = d.produto.estoque ?? "";
-        document.getElementById("local").innerText = d.produto.localizacao || "";
-
-        const img = document.getElementById("imagem");
-        if (d.produto.imagem) {
-          img.src = d.produto.imagem;
-          img.style.display = "block";
-        } else {
-          img.src = "";
-          img.style.display = "none";
-        }
-
-        idProduto = d.produto.id || null;
-        codigoProdutoAtual = d.produto.codigo || null;
-        document.getElementById("novoLocal").focus();
-      } catch (e) {
-        marcarCampoBusca("erro");
-        tocarSom("erro");
-        vibrarErro();
-        mostrarToast("Erro ao buscar produto: " + e.message, "erro");
-      }
+      if (encontrado) break;
     }
 
-    async function salvar() {
-      const sku = codigoProdutoAtual || document.getElementById("sku").value.trim();
-      const novoLocal = document.getElementById("novoLocal").value.trim();
-
-      if (!sku || sku.length < 3) {
-        tocarSom("erro");
-        vibrarErro();
-        mostrarToast("Busque um produto antes de salvar", "erro");
-        return;
-      }
-
-      if (!novoLocal) {
-        tocarSom("erro");
-        vibrarErro();
-        mostrarToast("Digite a nova localização", "erro");
-        document.getElementById("novoLocal").focus();
-        return;
-      }
-
-      try {
-        const r = await fetch("/salvar", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            key: API_KEY,
-            codigo: sku,
-            novaLocalizacao: novoLocal
-          })
-        });
-
-        const d = await r.json();
-
-        if (!d.ok) {
-          tocarSom("erro");
-          vibrarErro();
-          mostrarToast(d.erro || "Erro ao salvar", "erro");
-          return;
-        }
-
-        tocarSom("ok");
-        vibrarOk();
-        mostrarToast("Salvo com sucesso", "ok");
-        limparTudoAposSalvar();
-      } catch (e) {
-        tocarSom("erro");
-        vibrarErro();
-        mostrarToast("Erro ao salvar: " + e.message, "erro");
-      }
+    if (!d || !d.ok || !d.produto) {
+      marcarCampoBusca("erro");
+      tocarSom("erro");
+      vibrarErro();
+      mostrarToast((d && d.erro) || "Produto não encontrado", "erro");
+      return;
     }
+
+    marcarCampoBusca("ok");
+    tocarSom("ok");
+
+    document.getElementById("nome").innerText = d.produto.nome || "";
+    document.getElementById("codigo").innerText = d.produto.codigo || "";
+    document.getElementById("ean").innerText = d.produto.ean || "";
+    document.getElementById("estoque").innerText = d.produto.estoque ?? "";
+    document.getElementById("local").innerText = d.produto.localizacao || "";
+
+    const img = document.getElementById("imagem");
+    if (d.produto.imagem) {
+      img.src = d.produto.imagem;
+      img.style.display = "block";
+    } else {
+      img.src = "";
+      img.style.display = "none";
+    }
+
+    idProduto = d.produto.id || null;
+    codigoProdutoAtual = d.produto.codigo || null;
+    document.getElementById("novoLocal").focus();
+  } catch (e) {
+    marcarCampoBusca("erro");
+    tocarSom("erro");
+    vibrarErro();
+    mostrarToast("Erro ao buscar produto: " + e.message, "erro");
+  }
+}
 
     document.getElementById("sku").addEventListener("input", () => {
       marcarCampoBusca("");
