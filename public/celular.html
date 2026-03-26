@@ -4,19 +4,24 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>GOOD x Localização</title>
+
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
+      padding: 16px;
       background: #f5f5f5;
       margin: 0;
+      color: #111;
     }
 
-    input, button {
+    input,
+    button {
       width: 100%;
-      padding: 15px;
+      padding: 14px;
       margin-top: 10px;
       font-size: 18px;
       border-radius: 10px;
@@ -30,9 +35,9 @@
 
     .box {
       background: white;
-      padding: 15px;
+      padding: 12px 14px;
       border-radius: 10px;
-      margin-top: 15px;
+      margin-top: 10px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
     }
 
@@ -46,6 +51,9 @@
       border-radius: 10px;
       display: none;
       background: #fff;
+      max-height: 250px;
+      object-fit: contain;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.04);
     }
 
     #toast {
@@ -83,6 +91,7 @@
     #tituloPagina {
       margin: 0;
       font-size: 28px;
+      line-height: 1.1;
     }
 
     #btnSairTopo {
@@ -95,6 +104,7 @@
       color: #000;
       border: 1px solid #ccc;
       border-radius: 8px;
+      flex-shrink: 0;
     }
 
     .linha-checkbox {
@@ -140,6 +150,80 @@
       border: 1px solid #ccc;
       border-radius: 8px;
     }
+
+    .linha-acao {
+      display: flex;
+      align-items: stretch;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .linha-acao input {
+      margin-top: 0;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+
+    .linha-acao button {
+      margin-top: 0;
+      width: 108px;
+      min-width: 108px;
+      padding: 0 12px;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .info-produto {
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .info-produto .linha-info {
+      margin: 4px 0;
+      word-break: break-word;
+    }
+
+    .info-produto .linha-info strong {
+      font-weight: 700;
+    }
+
+    @media (max-width: 420px) {
+      body {
+        padding: 12px;
+      }
+
+      #tituloPagina {
+        font-size: 24px;
+      }
+
+      input,
+      button {
+        font-size: 16px;
+        padding: 13px;
+      }
+
+      .linha-acao {
+        gap: 6px;
+      }
+
+      .linha-acao button {
+        width: 96px;
+        min-width: 96px;
+        font-size: 15px;
+      }
+
+      .box {
+        padding: 10px 12px;
+      }
+
+      .info-produto {
+        font-size: 14px;
+      }
+
+      #imagem {
+        max-height: 210px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -167,32 +251,38 @@
   </div>
 
   <div id="sistema">
-    <input
-      type="text"
-      id="sku"
-      placeholder="Bipar EAN ou digitar SKU"
-      onkeypress="if(event.key==='Enter'){buscar();}"
-      autofocus
-    />
-    <button onclick="buscar()">Buscar</button>
-
-    <div class="box">
-      <div><b>Produto:</b> <span id="nome"></span></div>
-      <div><b>SKU:</b> <span id="codigo"></span></div>
-      <div><b>EAN:</b> <span id="ean"></span></div>
-      <div><b>Estoque:</b> <span id="estoque"></span></div>
-      <div><b>Local atual:</b> <span id="local"></span></div>
+    <div class="linha-acao">
+      <input
+        type="text"
+        id="sku"
+        placeholder="Bipar EAN ou digitar SKU"
+        onkeypress="if(event.key==='Enter'){buscar();}"
+        autofocus
+        autocomplete="off"
+      />
+      <button type="button" onclick="buscar()">Buscar</button>
     </div>
 
-    <input
-      type="text"
-      id="novoLocal"
-      placeholder="Nova localização"
-      onkeypress="if(event.key==='Enter'){salvar();}"
-    />
-    <button onclick="salvar()">Salvar</button>
+    <div class="box info-produto">
+      <div class="linha-info"><strong>Produto:</strong> <span id="nome"></span></div>
+      <div class="linha-info"><strong>SKU:</strong> <span id="codigo"></span></div>
+      <div class="linha-info"><strong>EAN:</strong> <span id="ean"></span></div>
+      <div class="linha-info"><strong>Estoque:</strong> <span id="estoque"></span></div>
+      <div class="linha-info"><strong>Local atual:</strong> <span id="local"></span></div>
+    </div>
 
-    <img id="imagem" />
+    <div class="linha-acao">
+      <input
+        type="text"
+        id="novoLocal"
+        placeholder="Nova localização"
+        onkeypress="if(event.key==='Enter'){salvar();}"
+        autocomplete="off"
+      />
+      <button type="button" onclick="salvar()">Salvar</button>
+    </div>
+
+    <img id="imagem" alt="Imagem do produto" />
   </div>
 
   <audio id="somOk" preload="auto">
@@ -383,64 +473,101 @@
       }
     }
 
+    function determinarOrdemBusca(codigoDigitado) {
+      const valor = String(codigoDigitado || "").trim();
+      const soNumeros = /^\d+$/.test(valor);
+
+      if (soNumeros && valor.length >= 8) {
+        return ["EAN", "SKU"];
+      }
+
+      return ["SKU", "EAN"];
+    }
+
+    async function consultarProduto(tipo, codigoDigitado) {
+      const url =
+        "/buscar?key=" +
+        encodeURIComponent(API_KEY) +
+        "&tipo=" +
+        encodeURIComponent(tipo) +
+        "&codigo=" +
+        encodeURIComponent(codigoDigitado) +
+        "&_=" +
+        Date.now();
+
+      const r = await fetch(url, { cache: "no-store" });
+      const d = await r.json();
+      return d;
+    }
+
     async function buscar() {
       const codigoDigitado = document.getElementById("sku").value.trim();
 
-      if (codigoDigitado.length < 2) {
+      if (codigoDigitado.length < 3) {
+        limparPainelProduto();
         marcarCampoBusca("erro");
         tocarSom("erro");
         vibrarErro();
-        mostrarToast("Digite ao menos 2 caracteres", "erro");
+        mostrarToast("Digite ao menos 3 caracteres", "erro");
         return;
       }
 
       limparPainelProduto();
       marcarCampoBusca("");
 
-      let r = await fetch("/buscar?key=" + encodeURIComponent(API_KEY) + "&tipo=SKU&codigo=" + encodeURIComponent(codigoDigitado));
-      let d = await r.json();
+      try {
+        const ordem = determinarOrdemBusca(codigoDigitado);
+        let d = null;
 
-      if (!d.ok || !d.produto) {
-        r = await fetch("/buscar?key=" + encodeURIComponent(API_KEY) + "&tipo=EAN&codigo=" + encodeURIComponent(codigoDigitado));
-        d = await r.json();
-      }
+        for (const tipo of ordem) {
+          d = await consultarProduto(tipo, codigoDigitado);
+          if (d && d.ok && d.produto) {
+            break;
+          }
+        }
 
-      if (!d.ok || !d.produto) {
+        if (!d || !d.ok || !d.produto) {
+          marcarCampoBusca("erro");
+          tocarSom("erro");
+          vibrarErro();
+          mostrarToast((d && d.erro) || "Produto não encontrado", "erro");
+          return;
+        }
+
+        marcarCampoBusca("ok");
+        tocarSom("ok");
+
+        document.getElementById("nome").innerText = d.produto.nome || "";
+        document.getElementById("codigo").innerText = d.produto.codigo || "";
+        document.getElementById("ean").innerText = d.produto.ean || "";
+        document.getElementById("estoque").innerText = d.produto.estoque ?? "";
+        document.getElementById("local").innerText = d.produto.localizacao || "";
+
+        const img = document.getElementById("imagem");
+        if (d.produto.imagem) {
+          img.src = d.produto.imagem;
+          img.style.display = "block";
+        } else {
+          img.src = "";
+          img.style.display = "none";
+        }
+
+        idProduto = d.produto.id || null;
+        codigoProdutoAtual = d.produto.codigo || null;
+        document.getElementById("novoLocal").focus();
+      } catch (e) {
         marcarCampoBusca("erro");
         tocarSom("erro");
         vibrarErro();
-        mostrarToast(d.erro || "Produto não encontrado", "erro");
-        return;
+        mostrarToast("Erro ao buscar produto: " + e.message, "erro");
       }
-
-      marcarCampoBusca("ok");
-      tocarSom("ok");
-
-      document.getElementById("nome").innerText = d.produto.nome || "";
-      document.getElementById("codigo").innerText = d.produto.codigo || "";
-      document.getElementById("ean").innerText = d.produto.ean || "";
-      document.getElementById("estoque").innerText = d.produto.estoque ?? "";
-      document.getElementById("local").innerText = d.produto.localizacao || "";
-
-      const img = document.getElementById("imagem");
-      if (d.produto.imagem) {
-        img.src = d.produto.imagem;
-        img.style.display = "block";
-      } else {
-        img.src = "";
-        img.style.display = "none";
-      }
-
-      idProduto = d.produto.id || null;
-      codigoProdutoAtual = d.produto.codigo || null;
-      document.getElementById("novoLocal").focus();
     }
 
     async function salvar() {
       const sku = codigoProdutoAtual || document.getElementById("sku").value.trim();
       const novoLocal = document.getElementById("novoLocal").value.trim();
 
-      if (!sku || sku.length < 2) {
+      if (!sku || sku.length < 3) {
         tocarSom("erro");
         vibrarErro();
         mostrarToast("Busque um produto antes de salvar", "erro");
@@ -455,29 +582,35 @@
         return;
       }
 
-      const r = await fetch("/salvar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          key: API_KEY,
-          codigo: sku,
-          novaLocalizacao: novoLocal
-        })
-      });
+      try {
+        const r = await fetch("/salvar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key: API_KEY,
+            codigo: sku,
+            novaLocalizacao: novoLocal
+          })
+        });
 
-      const d = await r.json();
+        const d = await r.json();
 
-      if (!d.ok) {
+        if (!d.ok) {
+          tocarSom("erro");
+          vibrarErro();
+          mostrarToast(d.erro || "Erro ao salvar", "erro");
+          return;
+        }
+
+        tocarSom("ok");
+        vibrarOk();
+        mostrarToast("Salvo com sucesso", "ok");
+        limparTudoAposSalvar();
+      } catch (e) {
         tocarSom("erro");
         vibrarErro();
-        mostrarToast(d.erro || "Erro ao salvar", "erro");
-        return;
+        mostrarToast("Erro ao salvar: " + e.message, "erro");
       }
-
-      tocarSom("ok");
-      vibrarOk();
-      mostrarToast("Salvo com sucesso", "ok");
-      limparTudoAposSalvar();
     }
 
     document.getElementById("sku").addEventListener("input", () => {
