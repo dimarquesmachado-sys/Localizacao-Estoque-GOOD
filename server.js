@@ -214,7 +214,7 @@ async function carregarTodosOsProdutos() {
 
   try {
     while (true) {
-      const url = `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&limite=100&criterio=1`;
+      const url = `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&limite=100`;
       const { response, data } = await blingFetch(url);
 
       if (response.status === 429) {
@@ -233,6 +233,8 @@ async function carregarTodosOsProdutos() {
       }
 
       const lista = data?.data || [];
+      const totalApi = data?.total || data?.meta?.total || "?";
+      if (pagina === 1) console.log(`[CACHE] API informa total de produtos: ${totalApi}`);
       if (!lista.length) break;
 
       // Busca detalhes de cada produto em paralelo (lotes de 5)
