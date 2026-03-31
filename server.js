@@ -335,8 +335,10 @@ async function resolverProduto(tipo, valor) {
         ]
       : [
           `https://api.bling.com.br/Api/v3/produtos?gtin=${encodeURIComponent(valorOriginal)}`,
+          `https://api.bling.com.br/Api/v3/produtos?gtinTributario=${encodeURIComponent(valorOriginal)}`,
           `https://api.bling.com.br/Api/v3/produtos?ean=${encodeURIComponent(valorOriginal)}`,
-          `https://api.bling.com.br/Api/v3/produtos?codigoBarras=${encodeURIComponent(valorOriginal)}`
+          `https://api.bling.com.br/Api/v3/produtos?codigoBarras=${encodeURIComponent(valorOriginal)}`,
+          `https://api.bling.com.br/Api/v3/produtos?codigo=${encodeURIComponent(valorOriginal)}`
         ];
 
   const idsJaTentados = new Set();
@@ -363,7 +365,7 @@ async function resolverProduto(tipo, valor) {
         }
       }
     } else {
-      const candidatos = lista.filter((item) => item?.id && !idsJaTentados.has(item.id)).slice(0, 15);
+      const candidatos = lista.filter((item) => item?.id && !idsJaTentados.has(item.id)).slice(0, 50);
       for (const item of candidatos) {
         idsJaTentados.add(item.id);
         await sleep(300); // evita rate limit
