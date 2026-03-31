@@ -393,12 +393,14 @@ async function resolverProduto(tipo, valor) {
       console.log(`[CACHE-HIT] ${tipoBusca} ${valorOriginal} → ${produto.codigo}`);
       return { ok: true, produto };
     }
-    console.log(`[CACHE-MISS] ${tipoBusca} ${valorOriginal} — buscando na API...`);
-  } else {
-    console.log(`[CACHE] Ainda carregando — buscando direto na API...`);
+
+    // Cache carregado e não achou — produto não existe, retorna na hora
+    console.log(`[CACHE-MISS] ${tipoBusca} ${valorOriginal} — não encontrado no cache.`);
+    return { ok: false, erro: "Produto não encontrado" };
   }
 
-  // 2. Fallback: busca direto na API
+  // Cache ainda carregando — fallback direto na API
+  console.log(`[CACHE] Ainda carregando — buscando direto na API...`);
   produto = await buscarNaApiDireta(tipoBusca, valorOriginal);
   if (produto) return { ok: true, produto };
 
