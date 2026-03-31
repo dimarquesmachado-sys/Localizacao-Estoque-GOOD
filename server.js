@@ -214,7 +214,7 @@ async function carregarTodosOsProdutos() {
 
   try {
     while (true) {
-      const url = `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&limite=100`;
+      const url = `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&limite=100&criterio=1`;
       const { response, data } = await blingFetch(url);
 
       if (response.status === 429) {
