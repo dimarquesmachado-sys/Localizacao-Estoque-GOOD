@@ -217,6 +217,16 @@ async function carregarTodosOsProdutos() {
       const url = `https://api.bling.com.br/Api/v3/produtos?pagina=${pagina}&limite=100`;
       const { response, data } = await blingFetch(url);
 
+      if (response.status === 429) {
+        console.warn(`[CACHE] Rate limit na página ${pagina}. Aguardando 3s...`);
+        await sleep(3000);
+        continue; // tenta a mesma página novamente
+      }
+      if (response.status === 429) {
+        console.warn(`[CACHE] Rate limit na página ${pagina}. Aguardando 3s...`);
+        await sleep(3000);
+        continue; // tenta a mesma página novamente
+      }
       if (!response.ok) {
         console.warn(`[CACHE] Erro na página ${pagina}:`, response.status);
         break;
@@ -231,7 +241,7 @@ async function carregarTodosOsProdutos() {
         await Promise.all(lote.map(async (item) => {
           if (!item?.id) return;
           try {
-            await sleep(100);
+            await sleep(300);
             const det = await blingFetch(`https://api.bling.com.br/Api/v3/produtos/${item.id}`);
             if (!det.response.ok) return;
             const p = det.data?.data;
@@ -259,7 +269,7 @@ async function carregarTodosOsProdutos() {
 
       if (lista.length < 100) break;
       pagina++;
-      await sleep(500);
+      await sleep(1000);
     }
 
     // Atualiza cache atomicamente
