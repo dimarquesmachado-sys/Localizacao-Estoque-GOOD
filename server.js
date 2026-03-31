@@ -150,12 +150,21 @@ function getPossiveisCodigosSku(obj) {
 }
 
 function getPossiveisGtins(obj) {
-  return [
+  const candidatos = [
     obj?.gtin, obj?.ean, obj?.codigoBarras, obj?.gtinEan, obj?.gtinTributario,
     obj?.codigo_barras, obj?.codigoDeBarras, obj?.codigo_barra, obj?.codBarras,
     obj?.codigobarras, obj?.codigoBarrasTributario, obj?.gtin_embalagem, obj?.gtinEmbalagem,
-    obj?.tributavel?.gtin, obj?.tributavel?.ean, obj?.tributacao?.gtin, obj?.tributacao?.ean
-  ].filter(Boolean);
+    obj?.tributavel?.gtin, obj?.tributavel?.ean, obj?.tributacao?.gtin, obj?.tributacao?.ean,
+    // campos adicionais que o Bling pode retornar
+    obj?.gtinEanTributario, obj?.eanTributario, obj?.codigoBarrasTributario,
+    obj?.tributario?.gtin, obj?.tributario?.ean,
+    obj?.informacoesAdicionais?.gtin, obj?.informacoesAdicionais?.ean,
+  ];
+  // também verifica dentro de 'tributacao' e 'tributavel' recursivamente
+  if (obj?.tributacao) {
+    Object.values(obj.tributacao).forEach(v => { if (typeof v === 'string' && v.length >= 8) candidatos.push(v); });
+  }
+  return candidatos.filter(Boolean);
 }
 
 // ================= LOGIN =================
@@ -303,7 +312,12 @@ function matchSkuExato(produto, valorDigitado) {
 }
 
 function matchEanExato(produto, valorDigitado) {
-  return getPossiveisGtins(produto).some((c) => isExactDigits(c, valorDigitado));
+  const gtins = getPossiveisGtins(produto);
+  const achou = gtins.some((c) => isExactDigits(c, valorDigitado));
+  if (!achou && gtins.length > 0) {
+    console.log(`[EAN] Produto ${produto?.codigo} - GTINs encontrados:`, gtins.join(', '));
+  }
+  return achou;
 }
 
 async function resolverProduto(tipo, valor) {
