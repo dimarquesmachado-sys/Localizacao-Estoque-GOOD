@@ -307,6 +307,7 @@ async function resolverProduto(tipo, valor) {
     `https://api.bling.com.br/Api/v3/produtos?gtinTributario=${encodeURIComponent(valorOriginal)}`,
     `https://api.bling.com.br/Api/v3/produtos?ean=${encodeURIComponent(valorOriginal)}`,
     `https://api.bling.com.br/Api/v3/produtos?codigoBarras=${encodeURIComponent(valorOriginal)}`,
+    `https://api.bling.com.br/Api/v3/produtos?codigo=${encodeURIComponent(valorOriginal)}`,
   ];
   for (const url of urlsEan) {
     const { response, data } = await blingFetchComRetry(url);
@@ -318,6 +319,17 @@ async function resolverProduto(tipo, valor) {
         console.log(`[EAN-API] ${valorOriginal} → ${p.codigo}`);
         return { ok: true, produto: p };
       }
+    }
+  }
+
+  // 3. Busca nas variações — tenta buscar o produto pai pelo EAN da variação
+  // Varre o índice de SKU buscando apenas produtos já em cache (sem novas requisições)
+  console.log(`[EAN-CACHE] Varrendo ${cacheDetalhes.size} produtos em cache...`);
+  for (const [, p] of cacheDetalhes) {
+    if (getEans(p).some(e => isExactDigits(e, valorOriginal))) {
+      console.log(`[EAN-CACHE] Encontrado em cache: ${p.codigo}`);
+      indiceEan.set(eanDigits, String(p.id));
+      return { ok: true, produto: p };
     }
   }
 
