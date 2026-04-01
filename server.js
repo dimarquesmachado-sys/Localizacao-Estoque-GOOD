@@ -177,6 +177,28 @@ async function blingFetchComRetry(url, options = {}) {
   return await blingFetch(url, options);
 }
 
+// ================= CARREGAR EANS EM BACKGROUND =================
+let eansCarregados = false;
+
+async function carregarEansBackground() {
+  console.log("[EANS] Iniciando carregamento de EANs em background...");
+  let total = 0;
+  for (const [sku, id] of indiceSku) {
+    // Pula se já tem no cache
+    if (cacheDetalhes.has(id)) { total++; continue; }
+    try {
+      await sleep(1000); // 1 por segundo — não sobrecarrega a API
+      await buscarDetalhe(id);
+      total++;
+      if (total % 50 === 0) {
+        console.log(`[EANS] ${total}/${indiceSku.size} produtos com EAN carregados...`);
+      }
+    } catch (e) { /* ignora erros individuais */ }
+  }
+  eansCarregados = true;
+  console.log(`[EANS] ✅ Todos os EANs carregados! ${indiceEan.size} EANs no índice.`);
+}
+
 // ================= CARREGAR ÍNDICE DA LISTAGEM =================
 // Carrega apenas a listagem básica (sem detalhes) — bem rápido
 async function carregarIndiceListagem() {
@@ -213,6 +235,9 @@ async function carregarIndiceListagem() {
 
   listagemCarregada = true;
   console.log(`[INDICE] ✅ ${total} produtos indexados por SKU.`);
+
+  // Carrega EANs em background — 1 produto por segundo
+  carregarEansBackground();
 
   // Sync a cada 5 minutos
   setInterval(async () => {
@@ -322,15 +347,19 @@ async function resolverProduto(tipo, valor) {
     }
   }
 
-  // 3. Busca nas variações — tenta buscar o produto pai pelo EAN da variação
-  // Varre o índice de SKU buscando apenas produtos já em cache (sem novas requisições)
-  console.log(`[EAN-CACHE] Varrendo ${cacheDetalhes.size} produtos em cache...`);
+  // 3. Varre cache de detalhes já carregados
   for (const [, p] of cacheDetalhes) {
     if (getEans(p).some(e => isExactDigits(e, valorOriginal))) {
       console.log(`[EAN-CACHE] Encontrado em cache: ${p.codigo}`);
       indiceEan.set(eanDigits, String(p.id));
       return { ok: true, produto: p };
     }
+  }
+
+  // 4. Se todos os EANs já foram carregados, produto definitivamente não existe
+  if (eansCarregados) {
+    console.log(`[EAN] EAN ${valorOriginal} não existe no Bling.`);
+    return { ok: false, erro: "Produto não encontrado" };
   }
 
   return { ok: false, erro: "Produto não encontrado" };
@@ -392,9 +421,11 @@ app.post("/salvar", async (req, res) => {
 app.get("/cache-status", (req, res) => {
   res.json({
     listagemCarregada,
+    eansCarregados,
     skusIndexados: indiceSku.size,
     eansIndexados: indiceEan.size,
-    detalhesEmCache: cacheDetalhes.size
+    detalhesEmCache: cacheDetalhes.size,
+    progresso: `${cacheDetalhes.size}/${indiceSku.size} produtos com detalhe`
   });
 });
 
