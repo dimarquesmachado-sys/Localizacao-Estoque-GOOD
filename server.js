@@ -321,20 +321,6 @@ async function resolverProduto(tipo, valor) {
     }
   }
 
-  // 3. Varredura pelo índice de SKU: busca detalhe de todos os produtos do índice
-  // Só faz isso se a listagem já carregou (evita varrer antes de ter o índice completo)
-  if (listagemCarregada) {
-    console.log(`[EAN-SCAN] Varrendo ${indiceSku.size} produtos pelo EAN ${valorOriginal}...`);
-    for (const [, id] of indiceSku) {
-      const p = await buscarDetalhe(id); // usa cache quando disponível
-      if (p && getEans(p).some(e => isExactDigits(e, valorOriginal))) {
-        console.log(`[EAN-SCAN] Encontrado: ${p.codigo}`);
-        return { ok: true, produto: p };
-      }
-      await sleep(100); // delay leve entre fetches
-    }
-  }
-
   return { ok: false, erro: "Produto não encontrado" };
 }
 
