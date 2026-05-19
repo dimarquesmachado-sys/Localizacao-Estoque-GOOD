@@ -130,7 +130,7 @@ async function renovarAccessToken() {
   body.append("grant_type", "refresh_token");
   body.append("refresh_token", String(refreshToken).trim());
 
-  const response = await fetch("https://www.bling.com.br/Api/v3/oauth/token", {
+  const response = await fetch("https://api.bling.com.br/Api/v3/oauth/token", {
     method: "POST",
     headers: { Authorization: `Basic ${basicAuth}`, "Content-Type": "application/x-www-form-urlencoded", Accept: "1.0" },
     body: body.toString()
